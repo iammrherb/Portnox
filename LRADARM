@@ -1,0 +1,336 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "region": {
+            "type": "string",
+            "defaultValue": "eastus",
+            "allowedValues": [
+                "eastus",
+                "eastus2",
+                "westus",
+                "westus2",
+                "northeurope",
+                "westeurope",
+                "southeastasia",
+                "eastasia",
+                "australiaeast",
+                "uksouth",
+                "centralus",
+                "southcentralus"
+            ],
+            "metadata": {
+                "description": "Specifies the Azure region where all resources for the Portnox Local RADIUS deployment will be deployed. Select a region from the allowed values to ensure compatibility and optimal performance."
+            }
+        },
+        "vnetName": {
+            "type": "string",
+            "defaultValue": "pnac-vnet",
+            "metadata": {
+                "description": "Name of the Virtual Network that will host the Portnox Local RADIUS server. This network is crucial for isolating and securing the RADIUS traffic."
+            }
+        },
+        "vnetAddressPrefix": {
+            "type": "string",
+            "defaultValue": "10.1.0.0/16",
+            "metadata": {
+                "description": "Address prefix for the Virtual Network hosting the Portnox Local RADIUS server. This CIDR block defines the address space used for network communication within the VNet."
+            }
+        },
+        "containerSubnetName": {
+            "type": "string",
+            "defaultValue": "container-subnet",
+            "metadata": {
+                "description": "Name of the subnet within the Virtual Network dedicated to the Portnox Local RADIUS container instance. This subnet ensures that the RADIUS server can communicate securely with other resources."
+            }
+        },
+        "containerSubnetPrefix": {
+            "type": "string",
+            "defaultValue": "10.1.0.0/24",
+            "metadata": {
+                "description": "Address prefix for the subnet hosting the Portnox Local RADIUS container. This subnet's address space must be a subset of the VNet's address space."
+            }
+        },
+        "containerName": {
+            "type": "string",
+            "defaultValue": "radius-server",
+            "metadata": {
+                "description": "Name of the Portnox Local RADIUS server container instance. This name will be used to identify the container within the Azure environment."
+            }
+        },
+        "radiusGatewayOrgId": {
+            "type": "string",
+            "defaultValue": "<your-org-id>",
+            "metadata": {
+                "description": "Your Portnox RADIUS Gateway Organization ID. This ID is required to authenticate and connect to the Portnox Local RADIUS service."
+            }
+        },
+        "radiusGatewayProfile": {
+            "type": "string",
+            "defaultValue": "<your-profile>",
+            "metadata": {
+                "description": "Your Portnox RADIUS Gateway Profile. This profile determines the settings and configurations used by the Portnox Local RADIUS server."
+            }
+        },
+        "radiusGatewayToken": {
+            "type": "string",
+            "defaultValue": "<your-token>",
+            "metadata": {
+                "description": "Your Portnox RADIUS Gateway Token. This token is used to securely connect to the Portnox Local RADIUS service. Note that this token is stored as a regular string and should be handled with care to maintain security."
+            }
+        },
+        "enablePersistence": {
+            "type": "bool",
+            "defaultValue": true,
+            "metadata": {
+                "description": "Enable data persistence for the Portnox Local RADIUS server. When set to true, data will be stored in an Azure File Share, ensuring that data is retained across container restarts."
+            }
+        },
+        "storageAccountName": {
+            "type": "string",
+            "defaultValue": "[format('radius{0}', uniqueString(resourceGroup().id))]",
+            "minLength": 3,
+            "maxLength": 24,
+            "metadata": {
+                "description": "Name of the Azure Storage Account for data persistence of the Portnox Local RADIUS server. The name must be globally unique and adhere to Azure naming conventions."
+            }
+        },
+        "fileShareName": {
+            "type": "string",
+            "defaultValue": "radiusdata",
+            "maxLength": 63,
+            "metadata": {
+                "description": "Name of the Azure File Share used for persisting the Portnox Local RADIUS server's data. This share will store configuration and logs to ensure data persistence."
+            }
+        },
+        "mountPath": {
+            "type": "string",
+            "defaultValue": "/data",
+            "metadata": {
+                "description": "Mount path for the Azure File Share in the Portnox Local RADIUS container. This is where the RADIUS server will read and write its persistent data."
+            }
+        },
+        "containerImage": {
+            "type": "string",
+            "defaultValue": "portnox/portnox-radius",
+            "metadata": {
+                "description": "The Docker image to use for the Portnox Local RADIUS container instance. This image contains the necessary software and configurations for the RADIUS server."
+            }
+        },
+        "usePrivateDockerRepo": {
+            "type": "bool",
+            "defaultValue": false,
+            "metadata": {
+                "description": "Specify whether to use a private Docker repository for the Portnox Local RADIUS image. If set to true, Docker Hub credentials are required for authentication."
+            }
+        },
+        "dockerHubUsername": {
+            "type": "string",
+            "defaultValue": "",
+            "metadata": {
+                "description": "Docker Hub username for private repository access. Required if 'usePrivateDockerRepo' is set to true to pull the Portnox Local RADIUS image."
+            }
+        },
+        "dockerHubPassword": {
+            "type": "securestring",
+            "defaultValue": "",
+            "metadata": {
+                "description": "Docker Hub password for private repository access. Required if 'usePrivateDockerRepo' is set to true to pull the Portnox Local RADIUS image. This is stored as a secure string for added security."
+            }
+        },
+        "enableDnsZone": {
+            "type": "bool",
+            "defaultValue": true,
+            "metadata": {
+                "description": "Enable the creation of a Private DNS Zone and record for the Portnox Local RADIUS server. This allows for easier access and management of the RADIUS server's IP address."
+            }
+        },
+        "privateDnsZoneName": {
+            "type": "string",
+            "defaultValue": "radius.private",
+            "metadata": {
+                "description": "The name of the Private DNS Zone to create for the Portnox Local RADIUS server. This zone will map the RADIUS server's name to its IP address."
+            }
+        },
+        "dnsRecordName": {
+            "type": "string",
+            "defaultValue": "radius",
+            "metadata": {
+                "description": "The hostname for the Portnox Local RADIUS server within the Private DNS Zone. This will form the Fully Qualified Domain Name (FQDN) for accessing the server."
+            }
+        }
+    },
+    "variables": {
+        "vnetId": "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]",
+        "subnetId": "[format('{0}/subnets/{1}', variables('vnetId'), parameters('containerSubnetName'))]"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Network/virtualNetworks",
+            "apiVersion": "2021-05-01",
+            "name": "[parameters('vnetName')]",
+            "location": "[parameters('region')]",
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "[parameters('vnetAddressPrefix')]"
+                    ]
+                },
+                "subnets": [
+                    {
+                        "name": "[parameters('containerSubnetName')]",
+                        "properties": {
+                            "addressPrefix": "[parameters('containerSubnetPrefix')]",
+                            "delegations": [
+                                {
+                                    "name": "Microsoft.ContainerInstance/containerGroups",
+                                    "properties": {
+                                        "serviceName": "Microsoft.ContainerInstance/containerGroups"
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "condition": "[parameters('enableDnsZone')]",
+            "type": "Microsoft.Network/privateDnsZones",
+            "apiVersion": "2020-06-01",
+            "name": "[parameters('privateDnsZoneName')]",
+            "location": "global"
+        },
+        {
+            "condition": "[parameters('enableDnsZone')]",
+            "type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
+            "apiVersion": "2020-06-01",
+            "name": "[format('{0}/vnetlink', parameters('privateDnsZoneName'))]",
+            "location": "global",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/privateDnsZones', parameters('privateDnsZoneName'))]",
+                "[variables('vnetId')]"
+            ],
+            "properties": {
+                "registrationEnabled": false,
+                "virtualNetwork": {
+                    "id": "[variables('vnetId')]"
+                }
+            }
+        },
+        {
+            "condition": "[parameters('enablePersistence')]",
+            "type": "Microsoft.Storage/storageAccounts",
+            "apiVersion": "2021-04-01",
+            "name": "[parameters('storageAccountName')]",
+            "location": "[parameters('region')]",
+            "sku": {
+                "name": "Standard_LRS"
+            },
+            "kind": "StorageV2",
+            "properties": {
+                "supportsHttpsTrafficOnly": true
+            }
+        },
+        {
+            "condition": "[parameters('enablePersistence')]",
+            "type": "Microsoft.Storage/storageAccounts/fileServices/shares",
+            "apiVersion": "2021-04-01",
+            "name": "[format('{0}/default/{1}', parameters('storageAccountName'), parameters('fileShareName'))]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
+            ],
+            "properties": {
+                "quota": 5120
+            }
+        },
+        {
+            "type": "Microsoft.ContainerInstance/containerGroups",
+            "apiVersion": "2021-09-01",
+            "name": "[parameters('containerName')]",
+            "location": "[parameters('region')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]",
+                "[if(parameters('enablePersistence'), resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '')]",
+                "[if(parameters('enableDnsZone'), resourceId('Microsoft.Network/privateDnsZones/virtualNetworkLinks', parameters('privateDnsZoneName'), 'vnetlink'), '')]"
+            ],
+            "properties": {
+                "containers": [
+                    {
+                        "name": "[parameters('containerName')]",
+                        "properties": {
+                            "image": "[parameters('containerImage')]",
+                            "resources": {
+                                "requests": {
+                                    "cpu": 1,
+                                    "memoryInGB": 1.5
+                                }
+                            },
+                            "environmentVariables": [
+                                {
+                                    "name": "RADIUS_GATEWAY_ORG_ID",
+                                    "value": "[parameters('radiusGatewayOrgId')]"
+                                },
+                                {
+                                    "name": "RADIUS_GATEWAY_PROFILE",
+                                    "value": "[parameters('radiusGatewayProfile')]"
+                                },
+                                {
+                                    "name": "RADIUS_GATEWAY_TOKEN",
+                                    "value": "[parameters('radiusGatewayToken')]"
+                                }
+                            ],
+                            "volumeMounts": "[if(parameters('enablePersistence'), createArray(createObject('name', 'radiusvolume', 'mountPath', parameters('mountPath'))), createArray())]"
+                        }
+                    }
+                ],
+                "osType": "Linux",
+                "restartPolicy": "Always",
+                "subnetIds": [
+                    {
+                        "id": "[variables('subnetId')]"
+                    }
+                ],
+                "imageRegistryCredentials": "[if(parameters('usePrivateDockerRepo'), createArray(createObject('server', 'index.docker.io', 'username', parameters('dockerHubUsername'), 'password', parameters('dockerHubPassword'))), createArray())]",
+                "volumes": "[if(parameters('enablePersistence'), createArray(createObject('name', 'radiusvolume', 'azureFile', createObject('shareName', parameters('fileShareName'), 'storageAccountName', parameters('storageAccountName'), 'storageAccountKey', listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2021-04-01').keys[0].value))), createArray())]"
+            }
+        },
+        {
+            "condition": "[parameters('enableDnsZone')]",
+            "type": "Microsoft.Network/privateDnsZones/A",
+            "apiVersion": "2020-06-01",
+            "name": "[format('{0}/{1}', parameters('privateDnsZoneName'), parameters('dnsRecordName'))]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/privateDnsZones', parameters('privateDnsZoneName'))]",
+                "[resourceId('Microsoft.ContainerInstance/containerGroups', parameters('containerName'))]"
+            ],
+            "properties": {
+                "ttl": 3600,
+                "aRecords": [
+                    {
+                        "ipv4Address": "[reference(resourceId('Microsoft.ContainerInstance/containerGroups', parameters('containerName'))).ipAddress.ip]"
+                    }
+                ]
+            }
+        }
+    ],
+    "outputs": {
+        "storageAccountName": {
+            "type": "string",
+            "value": "[parameters('storageAccountName')]"
+        },
+        "fileShareName": {
+            "type": "string",
+            "value": "[parameters('fileShareName')]"
+        },
+        "radiusFqdn": {
+            "condition": "[parameters('enableDnsZone')]",
+            "type": "string",
+            "value": "[format('{0}.{1}', parameters('dnsRecordName'), parameters('privateDnsZoneName'))]"
+        },
+        "containerIPAddress": {
+            "type": "string",
+            "value": "[reference(resourceId('Microsoft.ContainerInstance/containerGroups', parameters('containerName'))).ipAddress.ip]"
+        }
+    }
+}
