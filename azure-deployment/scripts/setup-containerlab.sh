@@ -74,8 +74,20 @@ log_success "Base packages installed"
 
 log_info "Installing Docker..."
 
+apt-get remove -y docker docker-engine docker.io containerd runc 2>/dev/null || true
+
+apt-get update -y
+apt-get install -y \
+    apt-transport-https \
+    ca-certificates \
+    curl \
+    gnupg \
+    lsb-release \
+    software-properties-common
+
 mkdir -p /etc/apt/keyrings
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+chmod a+r /etc/apt/keyrings/docker.gpg
 
 echo \
   "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
@@ -84,14 +96,13 @@ echo \
 apt-get update -y
 apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
-systemctl enable docker
-systemctl start docker
-
-if [ -n "$SUDO_USER" ]; then
+usermod -aG docker azureuser
+if [ -n "$SUDO_USER" ] && [ "$SUDO_USER" != "azureuser" ]; then
     usermod -aG docker $SUDO_USER
     log_info "Added $SUDO_USER to docker group"
 fi
 
+mkdir -p /etc/docker
 cat > /etc/docker/daemon.json <<EOF
 {
   "log-driver": "json-file",
@@ -111,7 +122,36 @@ cat > /etc/docker/daemon.json <<EOF
 }
 EOF
 
-systemctl restart docker
+systemctl daemon-reload
+systemctl enable docker
+
+log_info "Starting Docker service..."
+if systemctl start docker; then
+    log_success "Docker service started successfully"
+else
+    log_error "Failed to start Docker service, checking status..."
+    systemctl status docker --no-pager || true
+    journalctl -xeu docker.service --no-pager -n 50 || true
+    
+    log_warning "Attempting to fix Docker service..."
+    systemctl stop docker || true
+    rm -rf /var/lib/docker/network/files/* || true
+    systemctl daemon-reload
+    systemctl start docker || {
+        log_error "Docker service failed to start after troubleshooting"
+        exit 1
+    }
+fi
+
+sleep 5
+if docker ps >/dev/null 2>&1; then
+    log_success "Docker is running and responsive"
+    docker --version
+else
+    log_error "Docker is not responding"
+    systemctl status docker --no-pager
+    exit 1
+fi
 
 log_success "Docker installed and configured"
 
