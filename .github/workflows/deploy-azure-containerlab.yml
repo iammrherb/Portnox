@@ -1,0 +1,380 @@
+name: Deploy ContainerLab to Azure
+
+on:
+  workflow_dispatch:
+    inputs:
+      vm_name:
+        description: 'VM Name'
+        required: true
+        default: 'portnox-containerlab'
+      vm_size:
+        description: 'VM Size'
+        required: true
+        default: 'Standard_D8s_v3'
+        type: choice
+        options:
+          - Standard_D4s_v3
+          - Standard_D8s_v3
+          - Standard_D16s_v3
+          - Standard_D32s_v3
+      resource_group:
+        description: 'Azure Resource Group'
+        required: true
+        default: 'portnox-containerlab-rg'
+      location:
+        description: 'Azure Region'
+        required: true
+        default: 'eastus'
+        type: choice
+        options:
+          - eastus
+          - eastus2
+          - westus
+          - westus2
+          - centralus
+          - northeurope
+          - westeurope
+      data_disk_size:
+        description: 'Data Disk Size (GB)'
+        required: true
+        default: '512'
+      deploy_labs:
+        description: 'Deploy pre-configured labs'
+        required: true
+        default: true
+        type: boolean
+      import_images:
+        description: 'Import container images'
+        required: true
+        default: true
+        type: boolean
+
+env:
+  AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+  AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+  AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+
+jobs:
+  deploy-infrastructure:
+    runs-on: ubuntu-latest
+    outputs:
+      vm_fqdn: ${{ steps.deploy.outputs.hostname }}
+      vm_ip: ${{ steps.deploy.outputs.publicIP }}
+      antimony_url: ${{ steps.deploy.outputs.antimonyGuiUrl }}
+      clab_api_url: ${{ steps.deploy.outputs.containerlabApiUrl }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: |
+            {
+              "clientId": "${{ secrets.AZURE_CLIENT_ID }}",
+              "clientSecret": "${{ secrets.AZURE_CLIENT_SECRET }}",
+              "subscriptionId": "${{ secrets.AZURE_SUBSCRIPTION_ID }}",
+              "tenantId": "${{ secrets.AZURE_TENANT_ID }}"
+            }
+
+      - name: Create Resource Group
+        run: |
+          az group create \
+            --name ${{ github.event.inputs.resource_group }} \
+            --location ${{ github.event.inputs.location }}
+
+      - name: Generate SSH Key
+        id: ssh
+        run: |
+          ssh-keygen -t rsa -b 4096 -f ~/.ssh/azure_key -N ""
+          echo "SSH_PUBLIC_KEY=$(cat ~/.ssh/azure_key.pub)" >> $GITHUB_OUTPUT
+          echo "SSH_PRIVATE_KEY<<EOF" >> $GITHUB_OUTPUT
+          cat ~/.ssh/azure_key >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Deploy ARM Template
+        id: deploy
+        run: |
+          DEPLOYMENT_OUTPUT=$(az deployment group create \
+            --resource-group ${{ github.event.inputs.resource_group }} \
+            --template-file azure-deployment/templates/containerlab-vm.json \
+            --parameters \
+              vmName="${{ github.event.inputs.vm_name }}" \
+              vmSize="${{ github.event.inputs.vm_size }}" \
+              adminUsername="azureuser" \
+              authenticationType="sshPublicKey" \
+              adminPasswordOrKey="${{ steps.ssh.outputs.SSH_PUBLIC_KEY }}" \
+              dataDiskSizeGB=${{ github.event.inputs.data_disk_size }} \
+            --query 'properties.outputs' \
+            --output json)
+          
+          echo "Deployment Output: $DEPLOYMENT_OUTPUT"
+          
+          HOSTNAME=$(echo $DEPLOYMENT_OUTPUT | jq -r '.hostname.value')
+          PUBLIC_IP=$(echo $DEPLOYMENT_OUTPUT | jq -r '.publicIP.value')
+          ANTIMONY_URL=$(echo $DEPLOYMENT_OUTPUT | jq -r '.antimonyGuiUrl.value')
+          CLAB_API_URL=$(echo $DEPLOYMENT_OUTPUT | jq -r '.containerlabApiUrl.value')
+          
+          echo "hostname=$HOSTNAME" >> $GITHUB_OUTPUT
+          echo "publicIP=$PUBLIC_IP" >> $GITHUB_OUTPUT
+          echo "antimonyGuiUrl=$ANTIMONY_URL" >> $GITHUB_OUTPUT
+          echo "containerlabApiUrl=$CLAB_API_URL" >> $GITHUB_OUTPUT
+
+      - name: Save SSH Key
+        run: |
+          mkdir -p deployment-artifacts
+          echo "${{ steps.ssh.outputs.SSH_PRIVATE_KEY }}" > deployment-artifacts/azure_key
+          chmod 600 deployment-artifacts/azure_key
+          echo "${{ steps.deploy.outputs.hostname }}" > deployment-artifacts/vm_hostname.txt
+          echo "${{ steps.deploy.outputs.publicIP }}" > deployment-artifacts/vm_ip.txt
+
+      - name: Upload Deployment Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-artifacts
+          path: deployment-artifacts/
+          retention-days: 30
+
+      - name: Wait for VM to be ready
+        run: |
+          echo "Waiting for VM to be accessible..."
+          for i in {1..30}; do
+            if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -i deployment-artifacts/azure_key azureuser@${{ steps.deploy.outputs.hostname }} "echo 'VM is ready'"; then
+              echo "VM is accessible"
+              break
+            fi
+            echo "Attempt $i/30: VM not ready yet, waiting 20 seconds..."
+            sleep 20
+          done
+
+  configure-vm:
+    needs: deploy-infrastructure
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download Deployment Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: deployment-artifacts
+          path: deployment-artifacts/
+
+      - name: Set SSH Key Permissions
+        run: chmod 600 deployment-artifacts/azure_key
+
+      - name: Wait for cloud-init to complete
+        run: |
+          VM_HOST=$(cat deployment-artifacts/vm_hostname.txt)
+          echo "Waiting for cloud-init to complete on $VM_HOST..."
+          
+          ssh -o StrictHostKeyChecking=no -i deployment-artifacts/azure_key azureuser@$VM_HOST << 'EOF'
+            echo "Checking cloud-init status..."
+            cloud-init status --wait || true
+            echo "Cloud-init completed"
+          EOF
+
+      - name: Copy deployment scripts to VM
+        run: |
+          VM_HOST=$(cat deployment-artifacts/vm_hostname.txt)
+          
+          scp -o StrictHostKeyChecking=no -i deployment-artifacts/azure_key \
+            -r azure-deployment/scripts/* azureuser@$VM_HOST:/tmp/
+
+      - name: Run setup script
+        run: |
+          VM_HOST=$(cat deployment-artifacts/vm_hostname.txt)
+          
+          ssh -o StrictHostKeyChecking=no -i deployment-artifacts/azure_key azureuser@$VM_HOST << 'EOF'
+            chmod +x /tmp/*.sh
+            sudo /tmp/setup-containerlab.sh
+          EOF
+
+      - name: Mount and configure data disk
+        run: |
+          VM_HOST=$(cat deployment-artifacts/vm_hostname.txt)
+          
+          ssh -o StrictHostKeyChecking=no -i deployment-artifacts/azure_key azureuser@$VM_HOST << 'EOF'
+            # Format and mount data disk
+            if [ -b /dev/sdc ]; then
+              sudo mkfs.ext4 /dev/sdc
+              sudo mkdir -p /data
+              sudo mount /dev/sdc /data
+              echo '/dev/sdc /data ext4 defaults,nofail 0 2' | sudo tee -a /etc/fstab
+              
+              # Create directory structure
+              sudo mkdir -p /data/{containerlab,labs,images,configs,vrnetlab}
+              sudo chown -R azureuser:azureuser /data
+            fi
+          EOF
+
+  deploy-labs:
+    needs: configure-vm
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.deploy_labs == 'true' }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download Deployment Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: deployment-artifacts
+          path: deployment-artifacts/
+
+      - name: Set SSH Key Permissions
+        run: chmod 600 deployment-artifacts/azure_key
+
+      - name: Copy lab configurations
+        run: |
+          VM_HOST=$(cat deployment-artifacts/vm_hostname.txt)
+          
+          scp -o StrictHostKeyChecking=no -i deployment-artifacts/azure_key \
+            -r azure-deployment/labs/* azureuser@$VM_HOST:/data/labs/
+
+      - name: Deploy labs
+        run: |
+          VM_HOST=$(cat deployment-artifacts/vm_hostname.txt)
+          
+          ssh -o StrictHostKeyChecking=no -i deployment-artifacts/azure_key azureuser@$VM_HOST << 'EOF'
+            cd /data/labs
+            
+            # Deploy each lab
+            for lab in *.clab.yml; do
+              if [ -f "$lab" ]; then
+                echo "Deploying lab: $lab"
+                sudo containerlab deploy -t "$lab" || echo "Failed to deploy $lab"
+              fi
+            done
+            
+            # List deployed labs
+            sudo containerlab inspect --all
+          EOF
+
+  import-images:
+    needs: configure-vm
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.import_images == 'true' }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download Deployment Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: deployment-artifacts
+          path: deployment-artifacts/
+
+      - name: Set SSH Key Permissions
+        run: chmod 600 deployment-artifacts/azure_key
+
+      - name: Import container images
+        run: |
+          VM_HOST=$(cat deployment-artifacts/vm_hostname.txt)
+          
+          ssh -o StrictHostKeyChecking=no -i deployment-artifacts/azure_key azureuser@$VM_HOST << 'EOF'
+            sudo /tmp/import-images.sh
+          EOF
+
+  setup-antimony:
+    needs: configure-vm
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download Deployment Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: deployment-artifacts
+          path: deployment-artifacts/
+
+      - name: Set SSH Key Permissions
+        run: chmod 600 deployment-artifacts/azure_key
+
+      - name: Setup Antimony GUI
+        run: |
+          VM_HOST=$(cat deployment-artifacts/vm_hostname.txt)
+          
+          ssh -o StrictHostKeyChecking=no -i deployment-artifacts/azure_key azureuser@$VM_HOST << 'EOF'
+            sudo /tmp/setup-antimony.sh
+          EOF
+
+  deployment-summary:
+    needs: [deploy-infrastructure, configure-vm, deploy-labs, import-images, setup-antimony]
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+      - name: Download Deployment Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: deployment-artifacts
+          path: deployment-artifacts/
+
+      - name: Create Deployment Summary
+        run: |
+          VM_HOST=$(cat deployment-artifacts/vm_hostname.txt)
+          VM_IP=$(cat deployment-artifacts/vm_ip.txt)
+          
+          cat << EOF > $GITHUB_STEP_SUMMARY
+          # ContainerLab Deployment Summary
+          
+          ## VM Information
+          - **Hostname**: $VM_HOST
+          - **Public IP**: $VM_IP
+          - **VM Size**: ${{ github.event.inputs.vm_size }}
+          - **Location**: ${{ github.event.inputs.location }}
+          
+          ## Access Information
+          
+          ### SSH Access
+          \`\`\`bash
+          ssh -i azure_key azureuser@$VM_HOST
+          \`\`\`
+          
+          ### Antimony GUI
+          - URL: http://$VM_HOST:8080
+          
+          ### ContainerLab API
+          - URL: https://$VM_HOST:8443
+          
+          ## Services
+          - **RADIUS**: UDP 1812, 1813
+          - **TACACS+**: TCP 49
+          - **HTTP**: TCP 80
+          - **HTTPS**: TCP 443
+          
+          ## Next Steps
+          1. Download the SSH key from the artifacts
+          2. Access the VM using the SSH command above
+          3. Check deployed labs: \`sudo containerlab inspect --all\`
+          4. Access Antimony GUI at http://$VM_HOST:8080
+          
+          ## Cleanup
+          To delete all resources:
+          \`\`\`bash
+          az group delete --name ${{ github.event.inputs.resource_group }} --yes --no-wait
+          \`\`\`
+          EOF
+
+      - name: Comment on commit (if triggered by push)
+        if: github.event_name == 'push'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const vmHost = require('fs').readFileSync('deployment-artifacts/vm_hostname.txt', 'utf8').trim();
+            const vmIp = require('fs').readFileSync('deployment-artifacts/vm_ip.txt', 'utf8').trim();
+            
+            github.rest.repos.createCommitComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              commit_sha: context.sha,
+              body: `## ContainerLab Deployed Successfully! 🚀\n\n**VM**: ${vmHost}\n**IP**: ${vmIp}\n**Antimony GUI**: http://${vmHost}:8080\n\nSSH key available in workflow artifacts.`
+            });
