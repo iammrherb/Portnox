@@ -79,6 +79,34 @@ jobs:
               "tenantId": "${{ secrets.AZURE_TENANT_ID }}"
             }
 
+      - name: Check and Clean Existing Resource Group
+        run: |
+          RG_EXISTS=$(az group exists --name ${{ github.event.inputs.resource_group }})
+          
+          if [ "$RG_EXISTS" = "true" ]; then
+            echo "Resource group ${{ github.event.inputs.resource_group }} already exists"
+            echo "Checking for existing VM..."
+            
+            VM_EXISTS=$(az vm show --resource-group ${{ github.event.inputs.resource_group }} --name ${{ github.event.inputs.vm_name }} 2>/dev/null || echo "")
+            
+            if [ -n "$VM_EXISTS" ]; then
+              echo "VM ${{ github.event.inputs.vm_name }} already exists. Deleting it to allow fresh deployment..."
+              az vm delete --resource-group ${{ github.event.inputs.resource_group }} --name ${{ github.event.inputs.vm_name }} --yes --no-wait
+              
+              echo "Waiting for VM deletion to complete..."
+              sleep 30
+              
+              echo "Cleaning up associated resources..."
+              az disk delete --resource-group ${{ github.event.inputs.resource_group }} --name "${{ github.event.inputs.vm_name }}-datadisk" --yes --no-wait 2>/dev/null || true
+              az disk delete --resource-group ${{ github.event.inputs.resource_group }} --name "${{ github.event.inputs.vm_name }}-osdisk" --yes --no-wait 2>/dev/null || true
+              az network nic delete --resource-group ${{ github.event.inputs.resource_group }} --name "${{ github.event.inputs.vm_name }}-nic" --no-wait 2>/dev/null || true
+              az network public-ip delete --resource-group ${{ github.event.inputs.resource_group }} --name "${{ github.event.inputs.vm_name }}-pip" --no-wait 2>/dev/null || true
+              
+              echo "Waiting for resource cleanup..."
+              sleep 30
+            fi
+          fi
+
       - name: Create Resource Group
         run: |
           az group create \
