@@ -124,34 +124,31 @@ EOF
 
 systemctl daemon-reload
 systemctl enable docker
+systemctl start docker
 
-log_info "Starting Docker service..."
-if systemctl start docker; then
-    log_success "Docker service started successfully"
-else
-    log_error "Failed to start Docker service, checking status..."
-    systemctl status docker --no-pager || true
-    journalctl -xeu docker.service --no-pager -n 50 || true
+log_info "Waiting for Docker to initialize..."
+sleep 10
+
+MAX_RETRIES=30
+RETRY_COUNT=0
+while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+    if docker ps >/dev/null 2>&1; then
+        log_success "Docker is running and responsive"
+        docker --version
+        break
+    fi
     
-    log_warning "Attempting to fix Docker service..."
-    systemctl stop docker || true
-    rm -rf /var/lib/docker/network/files/* || true
-    systemctl daemon-reload
-    systemctl start docker || {
-        log_error "Docker service failed to start after troubleshooting"
+    RETRY_COUNT=$((RETRY_COUNT + 1))
+    if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
+        log_error "Docker failed to become responsive after $MAX_RETRIES attempts"
+        systemctl status docker --no-pager || true
+        journalctl -xeu docker.service --no-pager -n 100 || true
         exit 1
-    }
-fi
-
-sleep 5
-if docker ps >/dev/null 2>&1; then
-    log_success "Docker is running and responsive"
-    docker --version
-else
-    log_error "Docker is not responding"
-    systemctl status docker --no-pager
-    exit 1
-fi
+    fi
+    
+    log_info "Waiting for Docker to be ready... (attempt $RETRY_COUNT/$MAX_RETRIES)"
+    sleep 2
+done
 
 log_success "Docker installed and configured"
 
