@@ -296,9 +296,15 @@ log_info "Setting up VRNetlab..."
 mkdir -p /opt/vrnetlab
 cd /opt/vrnetlab
 
-git clone https://github.com/vrnetlab/vrnetlab.git .
+git clone https://github.com/vrnetlab/vrnetlab.git . || log_warning "VRNetlab clone failed"
 
-pip3 install -r requirements.txt || true
+if [ -f requirements.txt ]; then
+    pip3 install -r requirements.txt || log_warning "VRNetlab requirements installation failed (non-critical)"
+else
+    log_warning "VRNetlab requirements.txt not found (non-critical)"
+fi
+
+cd /root
 
 log_success "VRNetlab setup complete"
 
@@ -324,6 +330,20 @@ log_success "Directory structure created"
 
 log_info "Configuring system for ContainerLab..."
 
+log_info "Loading kernel modules..."
+modprobe bridge 2>/dev/null || log_warning "Bridge module already loaded or not available"
+modprobe br_netfilter 2>/dev/null || log_warning "br_netfilter module already loaded or not available"
+modprobe veth 2>/dev/null || true
+modprobe vxlan 2>/dev/null || true
+
+cat >> /etc/modules <<EOF
+bridge
+br_netfilter
+veth
+vxlan
+EOF
+
+log_info "Configuring sysctl settings..."
 cat >> /etc/sysctl.conf <<EOF
 
 net.ipv4.ip_forward=1
@@ -334,19 +354,7 @@ net.bridge.bridge-nf-call-iptables=0
 net.bridge.bridge-nf-call-ip6tables=0
 EOF
 
-sysctl -p
-
-modprobe bridge
-modprobe br_netfilter
-modprobe veth
-modprobe vxlan
-
-cat >> /etc/modules <<EOF
-bridge
-br_netfilter
-veth
-vxlan
-EOF
+sysctl -p || log_warning "Some sysctl settings may not have applied (non-critical)"
 
 log_success "System configured"
 
