@@ -307,7 +307,7 @@ jobs:
           EOF
 
   deployment-summary:
-    needs: [deploy-infrastructure, configure-vm, deploy-labs, import-images, setup-antimony]
+    needs: [deploy-infrastructure, configure-vm, setup-antimony]
     runs-on: ubuntu-latest
     if: always()
     
