@@ -1,0 +1,153 @@
+name: portnox-tacacs-plus
+
+mgmt:
+  network: portnox-tacacs-mgmt
+  ipv4-subnet: 172.20.21.0/24
+
+topology:
+  nodes:
+    # Portnox TACACS+ Server
+    portnox-tacacs:
+      kind: linux
+      image: dchidell/docker-tacacs:latest
+      mgmt-ipv4: 172.20.21.10
+      ports:
+        - "49:49/tcp"  # TACACS+
+      binds:
+        - /data/configs/tacacs:/etc/tacacs
+      env:
+        TACACS_SECRET: tacacskey123
+        TACACS_ENCRYPTION: true
+
+    # Cisco Router (TACACS+ Client)
+    cisco-router:
+      kind: vr-csr
+      image: vrnetlab/vr-csr:17.03.06
+      mgmt-ipv4: 172.20.21.20
+      startup-config: /data/configs/cisco-router-tacacs.cfg
+
+    # Cisco Nexus Switch (TACACS+ Client)
+    cisco-nexus:
+      kind: vr-n9kv
+      image: vrnetlab/vr-n9kv:10.2.3
+      mgmt-ipv4: 172.20.21.21
+      startup-config: /data/configs/cisco-nexus-tacacs.cfg
+
+    # Arista Router (TACACS+ Client)
+    arista-router:
+      kind: ceos
+      image: ceos:4.30.0F
+      mgmt-ipv4: 172.20.21.22
+      startup-config: /data/configs/arista-router-tacacs.cfg
+
+    # Juniper Router (TACACS+ Client)
+    juniper-router:
+      kind: vr-vjunosrouter
+      image: vrnetlab/vr-vjunosrouter:23.2R1
+      mgmt-ipv4: 172.20.21.23
+      startup-config: /data/configs/juniper-router-tacacs.cfg
+
+    # Palo Alto Firewall (TACACS+ Client)
+    palo-alto-fw:
+      kind: vr-pan
+      image: vrnetlab/vr-pan:11.0.0
+      mgmt-ipv4: 172.20.21.24
+      startup-config: /data/configs/palo-alto-tacacs.cfg
+
+    # Fortinet FortiGate (TACACS+ Client)
+    fortigate-fw:
+      kind: vr-ftdv
+      image: vrnetlab/vr-ftdv:7.2.0
+      mgmt-ipv4: 172.20.21.25
+      startup-config: /data/configs/fortigate-tacacs.cfg
+
+    # F5 BIG-IP (TACACS+ Client)
+    f5-bigip:
+      kind: linux
+      image: f5devcentral/f5-demo-httpd:latest
+      mgmt-ipv4: 172.20.21.26
+
+    # Active Directory (Identity Provider)
+    ad-server:
+      kind: linux
+      image: ubuntu/samba-ad-dc:latest
+      mgmt-ipv4: 172.20.21.30
+      env:
+        DOMAIN: CORP.LOCAL
+        ADMINPASS: Admin123!
+        DNSFORWARDER: 8.8.8.8
+      ports:
+        - "389:389"
+        - "636:636"
+        - "88:88"
+
+    # LDAP Server (Alternative Identity Provider)
+    ldap-server:
+      kind: linux
+      image: osixia/openldap:latest
+      mgmt-ipv4: 172.20.21.31
+      env:
+        LDAP_ORGANISATION: "Corporation"
+        LDAP_DOMAIN: "corp.local"
+        LDAP_ADMIN_PASSWORD: "ldapadmin"
+
+    # SAML Identity Provider (Okta/Azure AD simulation)
+    saml-idp:
+      kind: linux
+      image: kristophjunge/test-saml-idp:latest
+      mgmt-ipv4: 172.20.21.32
+      ports:
+        - "8080:8080"
+        - "8443:8443"
+
+    # Audit/Logging Server
+    audit-server:
+      kind: linux
+      image: ubuntu:22.04
+      mgmt-ipv4: 172.20.21.40
+      ports:
+        - "514:514/udp"
+        - "514:514/tcp"
+      exec:
+        - apt-get update && apt-get install -y rsyslog
+        - rsyslogd -n
+
+    # Jump Host for Management
+    jump-host:
+      kind: linux
+      image: ubuntu:22.04
+      mgmt-ipv4: 172.20.21.50
+      exec:
+        - apt-get update && apt-get install -y openssh-client telnet curl wget
+
+    # Monitoring Server (Prometheus/Grafana)
+    monitoring:
+      kind: linux
+      image: prom/prometheus:latest
+      mgmt-ipv4: 172.20.21.60
+      ports:
+        - "9090:9090"
+
+  links:
+    # Connect network devices to TACACS+ server
+    - endpoints: ["cisco-router:eth1", "portnox-tacacs:eth1"]
+    - endpoints: ["cisco-nexus:eth1", "portnox-tacacs:eth2"]
+    - endpoints: ["arista-router:eth1", "portnox-tacacs:eth3"]
+    - endpoints: ["juniper-router:eth1", "portnox-tacacs:eth4"]
+    - endpoints: ["palo-alto-fw:eth1", "portnox-tacacs:eth5"]
+    - endpoints: ["fortigate-fw:eth1", "portnox-tacacs:eth6"]
+
+    # Connect TACACS+ to identity providers
+    - endpoints: ["portnox-tacacs:eth7", "ad-server:eth1"]
+    - endpoints: ["portnox-tacacs:eth8", "ldap-server:eth1"]
+    - endpoints: ["portnox-tacacs:eth9", "saml-idp:eth1"]
+
+    # Management network
+    - endpoints: ["jump-host:eth1", "cisco-router:eth2"]
+    - endpoints: ["jump-host:eth2", "arista-router:eth2"]
+    - endpoints: ["jump-host:eth3", "juniper-router:eth2"]
+
+    # Logging connections
+    - endpoints: ["audit-server:eth1", "portnox-tacacs:eth10"]
+    - endpoints: ["audit-server:eth2", "cisco-router:eth3"]
+    - endpoints: ["audit-server:eth3", "cisco-nexus:eth2"]

@@ -1,0 +1,27 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "vmName": {
+      "value": "portnox-containerlab"
+    },
+    "adminUsername": {
+      "value": "azureuser"
+    },
+    "authenticationType": {
+      "value": "sshPublicKey"
+    },
+    "adminPasswordOrKey": {
+      "value": "REPLACE_WITH_YOUR_SSH_PUBLIC_KEY"
+    },
+    "vmSize": {
+      "value": "Standard_D8s_v3"
+    },
+    "ubuntuOSVersion": {
+      "value": "22.04-LTS"
+    },
+    "dataDiskSizeGB": {
+      "value": 512
+    }
+  }
+}

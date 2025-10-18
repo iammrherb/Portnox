@@ -1,0 +1,285 @@
+name: portnox-ztna
+
+mgmt:
+  network: portnox-ztna-mgmt
+  ipv4-subnet: 172.20.22.0/24
+
+topology:
+  nodes:
+    # Portnox ZTNA Gateway
+    ztna-gateway:
+      kind: linux
+      image: nginx:alpine
+      mgmt-ipv4: 172.20.22.10
+      ports:
+        - "443:443"
+        - "8443:8443"
+      binds:
+        - /data/configs/ztna:/etc/nginx
+      env:
+        ZTNA_MODE: gateway
+        SSL_CERT: /etc/nginx/certs/server.crt
+        SSL_KEY: /etc/nginx/certs/server.key
+
+    # Portnox ZTNA Controller
+    ztna-controller:
+      kind: linux
+      image: ubuntu:22.04
+      mgmt-ipv4: 172.20.22.11
+      ports:
+        - "8080:8080"
+        - "9443:9443"
+      exec:
+        - apt-get update && apt-get install -y python3 python3-pip
+        - pip3 install flask gunicorn
+
+    # Identity Provider - Azure AD Simulation
+    azure-ad-sim:
+      kind: linux
+      image: kristophjunge/test-saml-idp:latest
+      mgmt-ipv4: 172.20.22.20
+      ports:
+        - "8080:8080"
+        - "8443:8443"
+      env:
+        SIMPLESAMLPHP_SP_ENTITY_ID: ztna-gateway
+        SIMPLESAMLPHP_SP_ASSERTION_CONSUMER_SERVICE: https://ztna-gateway/saml/acs
+
+    # Identity Provider - Okta Simulation
+    okta-sim:
+      kind: linux
+      image: kristophjunge/test-saml-idp:latest
+      mgmt-ipv4: 172.20.22.21
+      ports:
+        - "8081:8080"
+        - "8444:8443"
+
+    # Identity Provider - Google Workspace Simulation
+    google-workspace-sim:
+      kind: linux
+      image: kristophjunge/test-saml-idp:latest
+      mgmt-ipv4: 172.20.22.22
+      ports:
+        - "8082:8080"
+        - "8445:8443"
+
+    # Protected Application 1 - Web App
+    app-webapp:
+      kind: linux
+      image: nginx:alpine
+      mgmt-ipv4: 172.20.22.30
+      ports:
+        - "80:80"
+      binds:
+        - /data/configs/apps/webapp:/usr/share/nginx/html
+
+    # Protected Application 2 - API Server
+    app-api:
+      kind: linux
+      image: ubuntu:22.04
+      mgmt-ipv4: 172.20.22.31
+      ports:
+        - "8000:8000"
+      exec:
+        - apt-get update && apt-get install -y python3 python3-pip
+        - pip3 install fastapi uvicorn
+        - uvicorn main:app --host 0.0.0.0 --port 8000
+
+    # Protected Application 3 - Database
+    app-database:
+      kind: linux
+      image: postgres:15-alpine
+      mgmt-ipv4: 172.20.22.32
+      ports:
+        - "5432:5432"
+      env:
+        POSTGRES_PASSWORD: dbpassword
+        POSTGRES_USER: dbuser
+        POSTGRES_DB: appdb
+
+    # Protected Application 4 - File Server
+    app-fileserver:
+      kind: linux
+      image: ubuntu:22.04
+      mgmt-ipv4: 172.20.22.33
+      ports:
+        - "445:445"
+        - "139:139"
+      exec:
+        - apt-get update && apt-get install -y samba
+
+    # Protected Application 5 - SSH Server
+    app-ssh:
+      kind: linux
+      image: ubuntu:22.04
+      mgmt-ipv4: 172.20.22.34
+      ports:
+        - "22:22"
+      exec:
+        - apt-get update && apt-get install -y openssh-server
+        - service ssh start
+
+    # Protected Application 6 - RDP Server
+    app-rdp:
+      kind: linux
+      image: ubuntu:22.04
+      mgmt-ipv4: 172.20.22.35
+      ports:
+        - "3389:3389"
+      exec:
+        - apt-get update && apt-get install -y xrdp
+        - service xrdp start
+
+    # Endpoint Security - EDR Agent Simulation
+    edr-agent:
+      kind: linux
+      image: alpine:latest
+      mgmt-ipv4: 172.20.22.40
+      exec:
+        - apk add --no-cache python3 py3-pip
+        - echo "EDR Agent Running"
+
+    # Device Posture Check Server
+    posture-server:
+      kind: linux
+      image: ubuntu:22.04
+      mgmt-ipv4: 172.20.22.41
+      ports:
+        - "8888:8888"
+      exec:
+        - apt-get update && apt-get install -y python3 python3-pip
+        - pip3 install flask
+
+    # MFA Server
+    mfa-server:
+      kind: linux
+      image: ubuntu:22.04
+      mgmt-ipv4: 172.20.22.42
+      ports:
+        - "8889:8889"
+      exec:
+        - apt-get update && apt-get install -y python3 python3-pip
+        - pip3 install pyotp flask
+
+    # User Endpoint 1 - Corporate Laptop
+    user-laptop-corp:
+      kind: linux
+      image: ubuntu:22.04
+      mgmt-ipv4: 172.20.22.50
+      exec:
+        - apt-get update && apt-get install -y curl wget firefox
+
+    # User Endpoint 2 - BYOD Device
+    user-laptop-byod:
+      kind: linux
+      image: ubuntu:22.04
+      mgmt-ipv4: 172.20.22.51
+      exec:
+        - apt-get update && apt-get install -y curl wget
+
+    # User Endpoint 3 - Mobile Device Simulation
+    user-mobile:
+      kind: linux
+      image: alpine:latest
+      mgmt-ipv4: 172.20.22.52
+      exec:
+        - apk add --no-cache curl wget
+
+    # Firewall - Perimeter Security
+    firewall:
+      kind: linux
+      image: ubuntu:22.04
+      mgmt-ipv4: 172.20.22.60
+      exec:
+        - apt-get update && apt-get install -y iptables
+        - iptables -A FORWARD -j ACCEPT
+
+    # Load Balancer
+    load-balancer:
+      kind: linux
+      image: haproxy:alpine
+      mgmt-ipv4: 172.20.22.61
+      ports:
+        - "80:80"
+        - "443:443"
+      binds:
+        - /data/configs/haproxy:/usr/local/etc/haproxy
+
+    # Certificate Authority
+    ca-server:
+      kind: linux
+      image: alpine:latest
+      mgmt-ipv4: 172.20.22.70
+      binds:
+        - /data/configs/ca:/ca
+      exec:
+        - apk add --no-cache openssl
+        - /ca/setup-ca.sh
+
+    # Logging and SIEM
+    siem-server:
+      kind: linux
+      image: ubuntu:22.04
+      mgmt-ipv4: 172.20.22.80
+      ports:
+        - "514:514/udp"
+        - "514:514/tcp"
+        - "5601:5601"  # Kibana
+      exec:
+        - apt-get update && apt-get install -y rsyslog
+
+    # Monitoring - Prometheus
+    prometheus:
+      kind: linux
+      image: prom/prometheus:latest
+      mgmt-ipv4: 172.20.22.81
+      ports:
+        - "9090:9090"
+
+    # Monitoring - Grafana
+    grafana:
+      kind: linux
+      image: grafana/grafana:latest
+      mgmt-ipv4: 172.20.22.82
+      ports:
+        - "3000:3000"
+      env:
+        GF_SECURITY_ADMIN_PASSWORD: admin
+
+  links:
+    # ZTNA Gateway connections
+    - endpoints: ["ztna-gateway:eth1", "ztna-controller:eth1"]
+    - endpoints: ["ztna-gateway:eth2", "azure-ad-sim:eth1"]
+    - endpoints: ["ztna-gateway:eth3", "okta-sim:eth1"]
+    - endpoints: ["ztna-gateway:eth4", "google-workspace-sim:eth1"]
+
+    # Protected applications to ZTNA Gateway
+    - endpoints: ["ztna-gateway:eth5", "app-webapp:eth1"]
+    - endpoints: ["ztna-gateway:eth6", "app-api:eth1"]
+    - endpoints: ["ztna-gateway:eth7", "app-database:eth1"]
+    - endpoints: ["ztna-gateway:eth8", "app-fileserver:eth1"]
+    - endpoints: ["ztna-gateway:eth9", "app-ssh:eth1"]
+    - endpoints: ["ztna-gateway:eth10", "app-rdp:eth1"]
+
+    # Security services
+    - endpoints: ["ztna-controller:eth2", "edr-agent:eth1"]
+    - endpoints: ["ztna-controller:eth3", "posture-server:eth1"]
+    - endpoints: ["ztna-controller:eth4", "mfa-server:eth1"]
+
+    # User endpoints to firewall
+    - endpoints: ["user-laptop-corp:eth1", "firewall:eth1"]
+    - endpoints: ["user-laptop-byod:eth1", "firewall:eth2"]
+    - endpoints: ["user-mobile:eth1", "firewall:eth3"]
+
+    # Firewall to load balancer to ZTNA gateway
+    - endpoints: ["firewall:eth4", "load-balancer:eth1"]
+    - endpoints: ["load-balancer:eth2", "ztna-gateway:eth11"]
+
+    # Certificate authority
+    - endpoints: ["ca-server:eth1", "ztna-gateway:eth12"]
+
+    # Logging and monitoring
+    - endpoints: ["siem-server:eth1", "ztna-gateway:eth13"]
+    - endpoints: ["siem-server:eth2", "ztna-controller:eth5"]
+    - endpoints: ["prometheus:eth1", "ztna-gateway:eth14"]
+    - endpoints: ["grafana:eth1", "prometheus:eth2"]

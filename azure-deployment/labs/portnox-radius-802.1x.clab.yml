@@ -1,0 +1,158 @@
+name: portnox-radius-8021x
+
+mgmt:
+  network: portnox-mgmt
+  ipv4-subnet: 172.20.20.0/24
+
+topology:
+  nodes:
+    # Portnox RADIUS Server
+    portnox-radius:
+      kind: linux
+      image: freeradius/freeradius-server:latest
+      mgmt-ipv4: 172.20.20.10
+      ports:
+        - "1812:1812/udp"  # RADIUS Authentication
+        - "1813:1813/udp"  # RADIUS Accounting
+      binds:
+        - /data/configs/radius:/etc/raddb
+      env:
+        RADIUS_SECRET: testing123
+        RADIUS_CLIENT: 0.0.0.0/0
+      exec:
+        - radiusd -X
+
+    # Cisco Switch (802.1X Authenticator)
+    cisco-switch:
+      kind: vr-csr
+      image: vrnetlab/vr-csr:17.03.06
+      mgmt-ipv4: 172.20.20.20
+      startup-config: /data/configs/cisco-switch-8021x.cfg
+      env:
+        CONNECTION_MODE: tc
+
+    # Arista Switch (802.1X Authenticator)
+    arista-switch:
+      kind: ceos
+      image: ceos:4.30.0F
+      mgmt-ipv4: 172.20.20.21
+      startup-config: /data/configs/arista-switch-8021x.cfg
+
+    # Juniper Switch (802.1X Authenticator)
+    juniper-switch:
+      kind: vr-vjunosswitch
+      image: vrnetlab/vr-vjunosswitch:23.2R1
+      mgmt-ipv4: 172.20.20.22
+      startup-config: /data/configs/juniper-switch-8021x.cfg
+
+    # Test Client 1 (Wired - EAP-TLS)
+    client-wired-tls:
+      kind: linux
+      image: ubuntu:22.04
+      mgmt-ipv4: 172.20.20.30
+      binds:
+        - /data/configs/supplicant:/etc/wpa_supplicant
+      exec:
+        - apt-get update && apt-get install -y wpasupplicant openssl
+        - wpa_supplicant -c /etc/wpa_supplicant/wired-tls.conf -i eth1 -D wired
+
+    # Test Client 2 (Wired - PEAP-MSCHAPv2)
+    client-wired-peap:
+      kind: linux
+      image: ubuntu:22.04
+      mgmt-ipv4: 172.20.20.31
+      binds:
+        - /data/configs/supplicant:/etc/wpa_supplicant
+      exec:
+        - apt-get update && apt-get install -y wpasupplicant
+        - wpa_supplicant -c /etc/wpa_supplicant/wired-peap.conf -i eth1 -D wired
+
+    # Test Client 3 (Wireless - EAP-TTLS)
+    client-wireless-ttls:
+      kind: linux
+      image: ubuntu:22.04
+      mgmt-ipv4: 172.20.20.32
+      binds:
+        - /data/configs/supplicant:/etc/wpa_supplicant
+      exec:
+        - apt-get update && apt-get install -y wpasupplicant wireless-tools
+        - wpa_supplicant -c /etc/wpa_supplicant/wireless-ttls.conf -i wlan0
+
+    # Windows AD Domain Controller (Identity Provider)
+    windows-ad:
+      kind: linux
+      image: ubuntu/samba-ad-dc:latest
+      mgmt-ipv4: 172.20.20.40
+      env:
+        DOMAIN: PORTNOX.LOCAL
+        ADMINPASS: P@ssw0rd123!
+        DNSFORWARDER: 8.8.8.8
+      ports:
+        - "389:389"   # LDAP
+        - "636:636"   # LDAPS
+        - "88:88"     # Kerberos
+
+    # LDAP Server (Alternative Identity Provider)
+    ldap-server:
+      kind: linux
+      image: osixia/openldap:latest
+      mgmt-ipv4: 172.20.20.41
+      env:
+        LDAP_ORGANISATION: "Portnox"
+        LDAP_DOMAIN: "portnox.local"
+        LDAP_ADMIN_PASSWORD: "admin"
+      ports:
+        - "389:389"
+        - "636:636"
+
+    # Certificate Authority
+    ca-server:
+      kind: linux
+      image: alpine:latest
+      mgmt-ipv4: 172.20.20.50
+      binds:
+        - /data/configs/ca:/ca
+      exec:
+        - apk add --no-cache openssl
+        - /ca/setup-ca.sh
+
+    # Monitoring/Logging Server
+    syslog-server:
+      kind: linux
+      image: ubuntu:22.04
+      mgmt-ipv4: 172.20.20.60
+      ports:
+        - "514:514/udp"  # Syslog
+        - "514:514/tcp"  # Syslog TCP
+      exec:
+        - apt-get update && apt-get install -y rsyslog
+        - rsyslogd -n
+
+    # Traffic Generator for Testing
+    traffic-gen:
+      kind: linux
+      image: networkstatic/iperf3:latest
+      mgmt-ipv4: 172.20.20.70
+
+  links:
+    # Connect switches to RADIUS server
+    - endpoints: ["cisco-switch:eth1", "portnox-radius:eth1"]
+    - endpoints: ["arista-switch:eth1", "portnox-radius:eth2"]
+    - endpoints: ["juniper-switch:eth1", "portnox-radius:eth3"]
+
+    # Connect clients to switches
+    - endpoints: ["client-wired-tls:eth1", "cisco-switch:eth2"]
+    - endpoints: ["client-wired-peap:eth1", "arista-switch:eth2"]
+    - endpoints: ["client-wireless-ttls:eth1", "juniper-switch:eth2"]
+
+    # Connect RADIUS to identity providers
+    - endpoints: ["portnox-radius:eth4", "windows-ad:eth1"]
+    - endpoints: ["portnox-radius:eth5", "ldap-server:eth1"]
+
+    # Connect CA to RADIUS
+    - endpoints: ["ca-server:eth1", "portnox-radius:eth6"]
+
+    # Connect syslog server
+    - endpoints: ["syslog-server:eth1", "cisco-switch:eth3"]
+    - endpoints: ["syslog-server:eth2", "arista-switch:eth3"]
+    - endpoints: ["syslog-server:eth3", "juniper-switch:eth3"]
