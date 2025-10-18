@@ -74,7 +74,18 @@ log_success "Base packages installed"
 
 log_info "Installing Docker..."
 
+systemctl stop docker.socket 2>/dev/null || true
+systemctl stop docker.service 2>/dev/null || true
+systemctl disable docker.socket 2>/dev/null || true
+systemctl disable docker.service 2>/dev/null || true
+
 apt-get remove -y docker docker-engine docker.io containerd runc 2>/dev/null || true
+apt-get autoremove -y 2>/dev/null || true
+
+rm -rf /var/lib/docker
+rm -rf /etc/docker
+rm -f /etc/systemd/system/docker.service.d/*.conf
+rm -f /etc/systemd/system/docker.socket.d/*.conf
 
 apt-get update -y
 apt-get install -y \
@@ -94,13 +105,6 @@ echo \
   $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
 
 apt-get update -y
-apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-
-usermod -aG docker azureuser
-if [ -n "$SUDO_USER" ] && [ "$SUDO_USER" != "azureuser" ]; then
-    usermod -aG docker $SUDO_USER
-    log_info "Added $SUDO_USER to docker group"
-fi
 
 mkdir -p /etc/docker
 cat > /etc/docker/daemon.json <<EOF
@@ -122,9 +126,18 @@ cat > /etc/docker/daemon.json <<EOF
 }
 EOF
 
+DEBIAN_FRONTEND=noninteractive apt-get install -y -o Dpkg::Options::="--force-confnew" \
+    docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+usermod -aG docker azureuser
+if [ -n "$SUDO_USER" ] && [ "$SUDO_USER" != "azureuser" ]; then
+    usermod -aG docker $SUDO_USER
+    log_info "Added $SUDO_USER to docker group"
+fi
+
 systemctl daemon-reload
-systemctl enable docker
-systemctl start docker
+systemctl enable docker.service
+systemctl start docker.service
 
 log_info "Waiting for Docker to initialize..."
 sleep 10
