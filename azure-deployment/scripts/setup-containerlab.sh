@@ -127,7 +127,9 @@ cat > /etc/docker/daemon.json <<EOF
 EOF
 
 DEBIAN_FRONTEND=noninteractive apt-get install -y -o Dpkg::Options::="--force-confnew" \
-    docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+    docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin || {
+    log_warning "Docker installation reported errors, but packages may be installed"
+}
 
 usermod -aG docker azureuser
 if [ -n "$SUDO_USER" ] && [ "$SUDO_USER" != "azureuser" ]; then
@@ -135,9 +137,43 @@ if [ -n "$SUDO_USER" ] && [ "$SUDO_USER" != "azureuser" ]; then
     log_info "Added $SUDO_USER to docker group"
 fi
 
+log_info "Configuring Docker service..."
 systemctl daemon-reload
+
+systemctl unmask docker.service 2>/dev/null || true
+systemctl unmask docker.socket 2>/dev/null || true
+
+systemctl disable docker.socket 2>/dev/null || true
+
 systemctl enable docker.service
-systemctl start docker.service
+
+log_info "Starting Docker service..."
+if ! systemctl start docker.service; then
+    log_warning "Initial Docker start failed, checking status..."
+    systemctl status docker.service --no-pager || true
+    journalctl -xeu docker.service --no-pager -n 50 || true
+    
+    log_info "Attempting to fix and restart Docker..."
+    systemctl stop docker.service 2>/dev/null || true
+    systemctl stop docker.socket 2>/dev/null || true
+    
+    pkill -9 dockerd 2>/dev/null || true
+    pkill -9 containerd 2>/dev/null || true
+    
+    sleep 3
+    
+    systemctl daemon-reload
+    systemctl reset-failed docker.service 2>/dev/null || true
+    
+    if ! systemctl start docker.service; then
+        log_error "Docker service failed to start after troubleshooting"
+        systemctl status docker.service --no-pager || true
+        journalctl -xeu docker.service --no-pager -n 100 || true
+        exit 1
+    fi
+fi
+
+log_success "Docker service started"
 
 log_info "Waiting for Docker to initialize..."
 sleep 10
