@@ -1,0 +1,250 @@
+name: juniper-vmx-lab
+
+topology:
+  defaults:
+    kind: juniper_vmx
+  
+  nodes:
+    # Juniper vMX Routers
+    vmx-core-1:
+      kind: juniper_vmx
+      image: vrnetlab/vr-vmx:latest
+      mgmt-ipv4: 172.20.20.30
+      cpu: 2
+      memory: 4GB
+      startup-config: |
+        system {
+            host-name vmx-core-1;
+            root-authentication {
+                encrypted-password "$6$Juniper";
+            }
+            login {
+                user admin {
+                    uid 2000;
+                    class super-user;
+                    authentication {
+                        encrypted-password "$6$admin";
+                    }
+                }
+            }
+            services {
+                ssh;
+                netconf {
+                    ssh;
+                }
+            }
+            tacplus-server {
+                172.20.20.100 {
+                    port 49;
+                    secret "tacacskey123";
+                }
+            }
+            authentication-order [ tacplus password ];
+            authorization {
+                tacplus {
+                    use-authorization;
+                }
+            }
+        }
+        interfaces {
+            ge-0/0/0 {
+                unit 0 {
+                    family inet {
+                        address 10.2.1.1/24;
+                    }
+                }
+            }
+            ge-0/0/1 {
+                unit 0 {
+                    family inet {
+                        address 10.2.2.1/24;
+                    }
+                }
+            }
+        }
+        protocols {
+            ospf {
+                area 0.0.0.0 {
+                    interface ge-0/0/0.0;
+                    interface ge-0/0/1.0;
+                }
+            }
+        }
+    
+    vmx-edge-1:
+      kind: juniper_vmx
+      image: vrnetlab/vr-vmx:latest
+      mgmt-ipv4: 172.20.20.31
+      cpu: 2
+      memory: 4GB
+      startup-config: |
+        system {
+            host-name vmx-edge-1;
+            root-authentication {
+                encrypted-password "$6$Juniper";
+            }
+            login {
+                user admin {
+                    uid 2000;
+                    class super-user;
+                    authentication {
+                        encrypted-password "$6$admin";
+                    }
+                }
+            }
+            services {
+                ssh;
+                netconf {
+                    ssh;
+                }
+            }
+            tacplus-server {
+                172.20.20.100 {
+                    port 49;
+                    secret "tacacskey123";
+                }
+            }
+            authentication-order [ tacplus password ];
+        }
+        interfaces {
+            ge-0/0/0 {
+                unit 0 {
+                    family inet {
+                        address 10.2.1.2/24;
+                    }
+                }
+            }
+            ge-0/0/1 {
+                unit 0 {
+                    family inet {
+                        address 10.2.3.1/24;
+                    }
+                }
+            }
+        }
+        protocols {
+            ospf {
+                area 0.0.0.0 {
+                    interface ge-0/0/0.0;
+                    interface ge-0/0/1.0;
+                }
+            }
+        }
+    
+    # Juniper vQFX Switch
+    vqfx-access-1:
+      kind: juniper_vqfx
+      image: vrnetlab/vr-vqfx:latest
+      mgmt-ipv4: 172.20.20.32
+      cpu: 2
+      memory: 4GB
+      startup-config: |
+        system {
+            host-name vqfx-access-1;
+            root-authentication {
+                encrypted-password "$6$Juniper";
+            }
+            login {
+                user admin {
+                    uid 2000;
+                    class super-user;
+                    authentication {
+                        encrypted-password "$6$admin";
+                    }
+                }
+            }
+            services {
+                ssh;
+                netconf {
+                    ssh;
+                }
+            }
+            radius-server {
+                172.20.20.101 {
+                    port 1812;
+                    secret "testing123";
+                }
+            }
+        }
+        interfaces {
+            xe-0/0/0 {
+                unit 0 {
+                    family inet {
+                        address 10.2.2.2/24;
+                    }
+                }
+            }
+            xe-0/0/1 {
+                unit 0 {
+                    family ethernet-switching {
+                        interface-mode access;
+                        vlan {
+                            members vlan10;
+                        }
+                    }
+                }
+            }
+        }
+        protocols {
+            dot1x {
+                authenticator {
+                    authentication-profile-name dot1x-profile;
+                    interface {
+                        xe-0/0/1.0;
+                    }
+                }
+            }
+            ospf {
+                area 0.0.0.0 {
+                    interface xe-0/0/0.0;
+                }
+            }
+        }
+        access {
+            radius-server {
+                172.20.20.101 {
+                    port 1812;
+                    secret "testing123";
+                }
+            }
+            profile dot1x-profile {
+                authentication-order radius;
+                radius {
+                    authentication-server 172.20.20.101;
+                }
+            }
+        }
+        vlans {
+            vlan10 {
+                vlan-id 10;
+                l3-interface irb.10;
+            }
+        }
+    
+    # RADIUS Server
+    radius-server:
+      kind: linux
+      image: portnox/radius:latest
+      mgmt-ipv4: 172.20.20.101
+      ports:
+        - 1812:1812/udp
+        - 1813:1813/udp
+    
+    # TACACS+ Server
+    tacacs-server:
+      kind: linux
+      image: portnox/tacacs:latest
+      mgmt-ipv4: 172.20.20.100
+      ports:
+        - 49:49/tcp
+    
+    # Test Client
+    test-client:
+      kind: linux
+      image: nicolaka/netshoot:latest
+      mgmt-ipv4: 172.20.20.203
+  
+  links:
+    - endpoints: ["vmx-core-1:eth1", "vmx-edge-1:eth1"]
+    - endpoints: ["vmx-core-1:eth2", "vqfx-access-1:eth1"]
+    - endpoints: ["vqfx-access-1:eth2", "test-client:eth1"]

@@ -1,0 +1,180 @@
+name: fortinet-fortigate-lab
+
+topology:
+  nodes:
+    # Fortinet FortiGate Firewall
+    fortigate-fw-1:
+      kind: fortinet_fortigate
+      image: vrnetlab/vr-fortios:latest
+      mgmt-ipv4: 172.20.20.50
+      cpu: 2
+      memory: 4GB
+      startup-config: |
+        config system global
+            set hostname "fortigate-fw-1"
+            set admin-sport 8443
+        end
+        
+        config system admin
+            edit "admin"
+                set password admin
+            next
+        end
+        
+        config system interface
+            edit "port1"
+                set mode static
+                set ip 10.4.1.1/24
+                set allowaccess ping https ssh
+            next
+            edit "port2"
+                set mode static
+                set ip 10.4.2.1/24
+                set allowaccess ping
+            next
+            edit "port3"
+                set mode static
+                set ip 10.4.3.1/24
+                set allowaccess ping
+            next
+        end
+        
+        config router static
+            edit 1
+                set dst 0.0.0.0/0
+                set gateway 10.4.2.254
+                set device "port2"
+            next
+        end
+        
+        config user radius
+            edit "radius-server-1"
+                set server "172.20.20.101"
+                set secret "testing123"
+                set auth-type auto
+            next
+        end
+        
+        config user tacacs+
+            edit "tacacs-server-1"
+                set server "172.20.20.100"
+                set key "tacacskey123"
+            next
+        end
+        
+        config user group
+            edit "radius-users"
+                set member "radius-server-1"
+            next
+            edit "tacacs-users"
+                set member "tacacs-server-1"
+            next
+        end
+        
+        config system admin
+            edit "admin"
+                set remote-auth enable
+                set accprofile "super_admin"
+                set remote-group "tacacs-users"
+            next
+        end
+        
+        config firewall policy
+            edit 1
+                set name "internal-to-external"
+                set srcintf "port1"
+                set dstintf "port2"
+                set srcaddr "all"
+                set dstaddr "all"
+                set action accept
+                set schedule "always"
+                set service "ALL"
+                set nat enable
+            next
+            edit 2
+                set name "internal-to-dmz"
+                set srcintf "port1"
+                set dstintf "port3"
+                set srcaddr "all"
+                set dstaddr "all"
+                set action accept
+                set schedule "always"
+                set service "ALL"
+            next
+        end
+        
+        config vpn ssl settings
+            set port 10443
+            set source-interface "port1"
+            set source-address "all"
+            set default-portal "full-access"
+        end
+    
+    # Internal Network
+    internal-router:
+      kind: linux
+      image: frrouting/frr:latest
+      mgmt-ipv4: 172.20.20.51
+      exec:
+        - ip addr add 10.4.1.2/24 dev eth1
+        - ip route add default via 10.4.1.1
+        - ip link set eth1 up
+    
+    # External Network
+    external-router:
+      kind: linux
+      image: frrouting/frr:latest
+      mgmt-ipv4: 172.20.20.52
+      exec:
+        - ip addr add 10.4.2.2/24 dev eth1
+        - ip link set eth1 up
+    
+    # DMZ Server
+    dmz-server:
+      kind: linux
+      image: nginx:alpine
+      mgmt-ipv4: 172.20.20.53
+      exec:
+        - ip addr add 10.4.3.2/24 dev eth1
+        - ip route add default via 10.4.3.1
+        - ip link set eth1 up
+    
+    # RADIUS Server
+    radius-server:
+      kind: linux
+      image: portnox/radius:latest
+      mgmt-ipv4: 172.20.20.101
+      ports:
+        - 1812:1812/udp
+        - 1813:1813/udp
+    
+    # TACACS+ Server
+    tacacs-server:
+      kind: linux
+      image: portnox/tacacs:latest
+      mgmt-ipv4: 172.20.20.100
+      ports:
+        - 49:49/tcp
+    
+    # Test Clients
+    internal-client:
+      kind: linux
+      image: nicolaka/netshoot:latest
+      mgmt-ipv4: 172.20.20.206
+      exec:
+        - ip addr add 10.4.1.10/24 dev eth1
+        - ip route add default via 10.4.1.1
+        - ip link set eth1 up
+    
+    vpn-client:
+      kind: linux
+      image: ubuntu:22.04
+      mgmt-ipv4: 172.20.20.207
+      exec:
+        - apt-get update && apt-get install -y openfortivpn
+  
+  links:
+    - endpoints: ["fortigate-fw-1:eth1", "internal-router:eth1"]
+    - endpoints: ["fortigate-fw-1:eth2", "external-router:eth1"]
+    - endpoints: ["fortigate-fw-1:eth3", "dmz-server:eth1"]
+    - endpoints: ["internal-router:eth2", "internal-client:eth1"]

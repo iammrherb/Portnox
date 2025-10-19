@@ -1,0 +1,182 @@
+name: arista-ceos-lab
+
+topology:
+  defaults:
+    kind: arista_ceos
+  
+  nodes:
+    # Arista cEOS Switches
+    arista-spine-1:
+      kind: arista_ceos
+      image: ceos:latest
+      mgmt-ipv4: 172.20.20.20
+      startup-config: |
+        hostname arista-spine-1
+        !
+        username admin privilege 15 secret admin
+        !
+        interface Management1
+           ip address dhcp
+        !
+        interface Ethernet1
+           no switchport
+           ip address 10.1.1.1/24
+           no shutdown
+        !
+        interface Ethernet2
+           no switchport
+           ip address 10.1.2.1/24
+           no shutdown
+        !
+        router ospf 1
+           network 10.1.1.0/24 area 0.0.0.0
+           network 10.1.2.0/24 area 0.0.0.0
+        !
+        aaa authentication login default local
+        aaa authorization exec default local
+        !
+        tacacs-server host 172.20.20.100 key tacacskey123
+        !
+        aaa group server tacacs+ TACACS
+           server 172.20.20.100
+        !
+        aaa authentication login default group TACACS local
+        aaa authorization exec default group TACACS local
+        !
+    
+    arista-leaf-1:
+      kind: arista_ceos
+      image: ceos:latest
+      mgmt-ipv4: 172.20.20.21
+      startup-config: |
+        hostname arista-leaf-1
+        !
+        username admin privilege 15 secret admin
+        !
+        interface Management1
+           ip address dhcp
+        !
+        interface Ethernet1
+           no switchport
+           ip address 10.1.1.2/24
+           no shutdown
+        !
+        interface Ethernet2
+           switchport mode access
+           switchport access vlan 10
+           dot1x pae authenticator
+           dot1x authentication failure action traffic allow vlan 999
+           no shutdown
+        !
+        vlan 10
+           name DATA
+        !
+        vlan 999
+           name QUARANTINE
+        !
+        router ospf 1
+           network 10.1.1.0/24 area 0.0.0.0
+        !
+        aaa authentication login default local
+        aaa authorization exec default local
+        !
+        dot1x system-auth-control
+        !
+        radius-server host 172.20.20.101 key testing123
+        !
+        aaa group server radius RADIUS
+           server 172.20.20.101
+        !
+        aaa authentication dot1x default group RADIUS
+        aaa authorization network default group RADIUS
+        !
+        tacacs-server host 172.20.20.100 key tacacskey123
+        !
+        aaa group server tacacs+ TACACS
+           server 172.20.20.100
+        !
+        aaa authentication login default group TACACS local
+        aaa authorization exec default group TACACS local
+        !
+    
+    arista-leaf-2:
+      kind: arista_ceos
+      image: ceos:latest
+      mgmt-ipv4: 172.20.20.22
+      startup-config: |
+        hostname arista-leaf-2
+        !
+        username admin privilege 15 secret admin
+        !
+        interface Management1
+           ip address dhcp
+        !
+        interface Ethernet1
+           no switchport
+           ip address 10.1.2.2/24
+           no shutdown
+        !
+        interface Ethernet2
+           switchport mode access
+           switchport access vlan 10
+           dot1x pae authenticator
+           no shutdown
+        !
+        vlan 10
+           name DATA
+        !
+        router ospf 1
+           network 10.1.2.0/24 area 0.0.0.0
+        !
+        aaa authentication login default local
+        aaa authorization exec default local
+        !
+        dot1x system-auth-control
+        !
+        radius-server host 172.20.20.101 key testing123
+        !
+        aaa group server radius RADIUS
+           server 172.20.20.101
+        !
+        aaa authentication dot1x default group RADIUS
+        !
+        tacacs-server host 172.20.20.100 key tacacskey123
+        !
+    
+    # RADIUS Server
+    radius-server:
+      kind: linux
+      image: portnox/radius:latest
+      mgmt-ipv4: 172.20.20.101
+      ports:
+        - 1812:1812/udp
+        - 1813:1813/udp
+    
+    # TACACS+ Server
+    tacacs-server:
+      kind: linux
+      image: portnox/tacacs:latest
+      mgmt-ipv4: 172.20.20.100
+      ports:
+        - 49:49/tcp
+    
+    # Test Clients
+    client-1:
+      kind: linux
+      image: ubuntu:22.04
+      mgmt-ipv4: 172.20.20.201
+      exec:
+        - apt-get update && apt-get install -y wpasupplicant
+    
+    client-2:
+      kind: linux
+      image: ubuntu:22.04
+      mgmt-ipv4: 172.20.20.202
+      exec:
+        - apt-get update && apt-get install -y wpasupplicant
+  
+  links:
+    - endpoints: ["arista-spine-1:eth1", "arista-leaf-1:eth1"]
+    - endpoints: ["arista-spine-1:eth2", "arista-leaf-2:eth1"]
+    - endpoints: ["arista-leaf-1:eth2", "client-1:eth1"]
+    - endpoints: ["arista-leaf-2:eth2", "client-2:eth1"]
