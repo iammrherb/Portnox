@@ -81,10 +81,13 @@ declare -a FRROUTING_IMAGES=(
 )
 
 declare -a PORTNOX_IMAGES=(
-    "portnox/radius-gateway:latest"
-    "portnox/tacacs-gateway:latest"
+    "portnox/portnox-radius:latest"
+    "portnox/portnox-tacacs:latest"
     "portnox/ztna-gateway:latest"
-    "portnox/autoupdate:latest"
+    "portnox/portnox-autoupdate:latest"
+    "portnox/portnox-dhcp:latest"
+    "portnox/portnox-siem:latest"
+    "portnox/portnox-unifi-agent:latest"
 )
 
 declare -a AUTH_IMAGES=(
@@ -189,10 +192,13 @@ pull_images "SR Labs Tools" "${SRLABS_IMAGES[@]}"
 
 log_info "Note: Portnox containers are official images from Docker Hub"
 log_info "These containers require environmental variables for tokens/secrets:"
-log_info "  - RADIUS Gateway: RADIUS_GATEWAY_ORG_ID, RADIUS_GATEWAY_PROFILE, RADIUS_GATEWAY_TOKEN"
-log_info "  - TACACS+ Gateway: TACACS_GATEWAY_ORG_ID, TACACS_GATEWAY_PROFILE, TACACS_GATEWAY_TOKEN"
-log_info "  - ZTNA Gateway: ZTNA_GATEWAY_ORG_ID, ZTNA_GATEWAY_TOKEN"
-log_info "  - AutoUpdate: AUTOUPDATE_ORG_ID, AUTOUPDATE_TOKEN"
+log_info "  - RADIUS: PORTNOX_ORG_ID, PORTNOX_PROFILE, PORTNOX_TOKEN"
+log_info "  - TACACS+: PORTNOX_ORG_ID, PORTNOX_PROFILE, PORTNOX_TOKEN"
+log_info "  - ZTNA Gateway: PORTNOX_ORG_ID, PORTNOX_TOKEN"
+log_info "  - AutoUpdate: PORTNOX_ORG_ID, PORTNOX_TOKEN"
+log_info "  - DHCP Proxy: PORTNOX_ORG_ID, PORTNOX_TOKEN, DHCP_INTERFACE"
+log_info "  - SIEM Forwarder: PORTNOX_ORG_ID, PORTNOX_TOKEN, SIEM_SERVER"
+log_info "  - Unifi Agent: PORTNOX_ORG_ID, PORTNOX_TOKEN, UNIFI_CONTROLLER"
 log_info "See https://docs.portnox.com/ for configuration details"
 echo ""
 
