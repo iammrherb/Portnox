@@ -1,0 +1,245 @@
+name: aruba-aoscx-radius-lab
+
+# Aruba AOS-CX Lab with RADIUS 802.1X Authentication
+# Requires: vrnetlab/vr-aoscx image (built from vendor QCOW2)
+# Use Case: Enterprise campus network with NAC
+
+topology:
+  nodes:
+    # Aruba AOS-CX Core Switch
+    aruba-core:
+      kind: vr-aoscx
+      image: vrnetlab/vr-aoscx:latest
+      mgmt-ipv4: 172.20.20.10
+      env:
+        # VRNetlab settings
+        CONNECTION_MODE: tc
+        VCPU: 2
+        RAM: 4096
+        # Switch configuration
+        HOSTNAME: aruba-core
+        MGMT_IP: 172.20.20.10/24
+        MGMT_GW: 172.20.20.1
+        # RADIUS settings
+        RADIUS_SERVER_1: 172.20.20.50
+        RADIUS_SECRET: testing123
+        RADIUS_AUTH_PORT: 1812
+        RADIUS_ACCT_PORT: 1813
+        # 802.1X settings
+        DOT1X_ENABLED: "true"
+        DOT1X_AUTH_MODE: multi-host
+        DOT1X_REAUTH_PERIOD: 3600
+        # VLAN settings
+        MGMT_VLAN: 1
+        DATA_VLAN: 10
+        VOICE_VLAN: 20
+        GUEST_VLAN: 30
+    
+    # Aruba AOS-CX Access Switch 1
+    aruba-access1:
+      kind: vr-aoscx
+      image: vrnetlab/vr-aoscx:latest
+      mgmt-ipv4: 172.20.20.11
+      env:
+        CONNECTION_MODE: tc
+        VCPU: 2
+        RAM: 4096
+        HOSTNAME: aruba-access1
+        MGMT_IP: 172.20.20.11/24
+        MGMT_GW: 172.20.20.1
+        RADIUS_SERVER_1: 172.20.20.50
+        RADIUS_SECRET: testing123
+        DOT1X_ENABLED: "true"
+        DOT1X_AUTH_MODE: multi-host
+        DOT1X_REAUTH_PERIOD: 3600
+        DATA_VLAN: 10
+        VOICE_VLAN: 20
+        GUEST_VLAN: 30
+    
+    # Aruba AOS-CX Access Switch 2
+    aruba-access2:
+      kind: vr-aoscx
+      image: vrnetlab/vr-aoscx:latest
+      mgmt-ipv4: 172.20.20.12
+      env:
+        CONNECTION_MODE: tc
+        VCPU: 2
+        RAM: 4096
+        HOSTNAME: aruba-access2
+        MGMT_IP: 172.20.20.12/24
+        MGMT_GW: 172.20.20.1
+        RADIUS_SERVER_1: 172.20.20.50
+        RADIUS_SECRET: testing123
+        DOT1X_ENABLED: "true"
+        DOT1X_AUTH_MODE: multi-host
+        DOT1X_REAUTH_PERIOD: 3600
+        DATA_VLAN: 10
+        VOICE_VLAN: 20
+        GUEST_VLAN: 30
+    
+    # Portnox RADIUS Server
+    radius-server:
+      kind: linux
+      image: portnox/radius:latest
+      mgmt-ipv4: 172.20.20.50
+      env:
+        # RADIUS configuration
+        RADIUS_SECRET: testing123
+        RADIUS_CLIENTS: 0.0.0.0/0
+        # LDAP integration
+        LDAP_ENABLED: "true"
+        LDAP_SERVER: ldap://172.20.20.60
+        LDAP_BASE_DN: dc=example,dc=com
+        LDAP_BIND_DN: cn=admin,dc=example,dc=com
+        LDAP_BIND_PASSWORD: password
+        # EAP methods
+        EAP_TLS_ENABLED: "true"
+        EAP_TTLS_ENABLED: "true"
+        EAP_PEAP_ENABLED: "true"
+        # Certificate settings
+        CA_CERT_PATH: /etc/raddb/certs/ca.pem
+        SERVER_CERT_PATH: /etc/raddb/certs/server.pem
+        SERVER_KEY_PATH: /etc/raddb/certs/server.key
+        # Logging
+        LOG_LEVEL: debug
+        LOG_AUTH: "true"
+        LOG_AUTH_BADPASS: "true"
+        LOG_AUTH_GOODPASS: "true"
+      ports:
+        - "1812:1812/udp"
+        - "1813:1813/udp"
+        - "18120:18120/tcp"
+    
+    # LDAP Server (OpenLDAP)
+    ldap-server:
+      kind: linux
+      image: osixia/openldap:latest
+      mgmt-ipv4: 172.20.20.60
+      env:
+        LDAP_ORGANISATION: Example Inc
+        LDAP_DOMAIN: example.com
+        LDAP_ADMIN_PASSWORD: admin
+        LDAP_CONFIG_PASSWORD: config
+        LDAP_READONLY_USER: "true"
+        LDAP_READONLY_USER_USERNAME: readonly
+        LDAP_READONLY_USER_PASSWORD: readonly
+        LDAP_TLS: "true"
+        LDAP_TLS_CRT_FILENAME: ldap.crt
+        LDAP_TLS_KEY_FILENAME: ldap.key
+        LDAP_TLS_CA_CRT_FILENAME: ca.crt
+      ports:
+        - "389:389"
+        - "636:636"
+    
+    # Certificate Authority
+    ca-server:
+      kind: linux
+      image: alpine:latest
+      mgmt-ipv4: 172.20.20.70
+      exec:
+        - apk add --no-cache openssl
+        - mkdir -p /ca/certs /ca/private
+        - |
+          cat > /ca/openssl.cnf <<EOF
+          [req]
+          distinguished_name = req_distinguished_name
+          x509_extensions = v3_ca
+          [req_distinguished_name]
+          [v3_ca]
+          basicConstraints = CA:TRUE
+          keyUsage = keyCertSign, cRLSign
+          subjectKeyIdentifier = hash
+          authorityKeyIdentifier = keyid:always,issuer
+          EOF
+        - openssl genrsa -out /ca/private/ca.key 4096
+        - openssl req -new -x509 -days 3650 -key /ca/private/ca.key -out /ca/certs/ca.crt -subj "/C=US/ST=State/L=City/O=Example Inc/CN=Example CA"
+    
+    # Test Clients
+    client-data:
+      kind: linux
+      image: nicolaka/netshoot:latest
+      mgmt-ipv4: 172.20.20.100
+      env:
+        CLIENT_TYPE: data
+        VLAN_ID: 10
+        DOT1X_IDENTITY: user@example.com
+        DOT1X_PASSWORD: password
+        EAP_METHOD: PEAP
+      exec:
+        - ip addr add 10.0.10.100/24 dev eth1
+        - ip route add default via 10.0.10.1
+    
+    client-voice:
+      kind: linux
+      image: nicolaka/netshoot:latest
+      mgmt-ipv4: 172.20.20.101
+      env:
+        CLIENT_TYPE: voice
+        VLAN_ID: 20
+        DOT1X_IDENTITY: phone@example.com
+        DOT1X_PASSWORD: password
+        EAP_METHOD: PEAP
+      exec:
+        - ip addr add 10.0.20.100/24 dev eth1
+        - ip route add default via 10.0.20.1
+    
+    client-guest:
+      kind: linux
+      image: nicolaka/netshoot:latest
+      mgmt-ipv4: 172.20.20.102
+      env:
+        CLIENT_TYPE: guest
+        VLAN_ID: 30
+        DOT1X_IDENTITY: guest@example.com
+        DOT1X_PASSWORD: password
+        EAP_METHOD: PEAP
+      exec:
+        - ip addr add 10.0.30.100/24 dev eth1
+        - ip route add default via 10.0.30.1
+    
+    # Monitoring
+    prometheus:
+      kind: linux
+      image: prom/prometheus:latest
+      mgmt-ipv4: 172.20.20.200
+      env:
+        PROMETHEUS_RETENTION_TIME: 15d
+        PROMETHEUS_STORAGE_PATH: /prometheus
+      ports:
+        - "9090:9090"
+      binds:
+        - prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    
+    grafana:
+      kind: linux
+      image: grafana/grafana:latest
+      mgmt-ipv4: 172.20.20.201
+      env:
+        GF_SECURITY_ADMIN_USER: admin
+        GF_SECURITY_ADMIN_PASSWORD: admin
+        GF_SERVER_ROOT_URL: http://grafana.example.com
+        GF_INSTALL_PLUGINS: grafana-piechart-panel
+      ports:
+        - "3000:3000"
+  
+  links:
+    # Core to Access switches
+    - endpoints: ["aruba-core:eth1", "aruba-access1:eth1"]
+    - endpoints: ["aruba-core:eth2", "aruba-access2:eth1"]
+    
+    # Access switches to clients
+    - endpoints: ["aruba-access1:eth2", "client-data:eth1"]
+    - endpoints: ["aruba-access1:eth3", "client-voice:eth1"]
+    - endpoints: ["aruba-access2:eth2", "client-guest:eth1"]
+    
+    # Core to services
+    - endpoints: ["aruba-core:eth3", "radius-server:eth1"]
+    - endpoints: ["aruba-core:eth4", "ldap-server:eth1"]
+    - endpoints: ["aruba-core:eth5", "ca-server:eth1"]
+    - endpoints: ["aruba-core:eth6", "prometheus:eth1"]
+    - endpoints: ["aruba-core:eth7", "grafana:eth1"]
+
+# Configuration files
+mgmt:
+  network: clab-mgmt
+  ipv4-subnet: 172.20.20.0/24
