@@ -85,7 +85,7 @@ topology:
     # RADIUS Server
     radius-server:
       kind: linux
-      image: portnox/radius:latest
+      image: portnox/portnox-radius:latest
       mgmt-ipv4: 172.20.20.101
       ports:
         - 1812:1812/udp
@@ -94,7 +94,7 @@ topology:
     # TACACS+ Server
     tacacs-server:
       kind: linux
-      image: portnox/tacacs:latest
+      image: portnox/portnox-tacacs:latest
       mgmt-ipv4: 172.20.20.100
       ports:
         - 49:49/tcp

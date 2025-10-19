@@ -114,8 +114,8 @@ sudo /tmp/import-images-comprehensive.sh
 ```
 
 This will build:
-- `portnox/radius:latest` - FreeRADIUS with LDAP/Kerberos support
-- `portnox/tacacs:latest` - TACACS+ server with PAM integration
+- `portnox/portnox-radius:latest` - FreeRADIUS with LDAP/Kerberos support
+- `portnox/portnox-tacacs:latest` - TACACS+ server with PAM integration
 - `portnox/ztna-gateway:latest` - ZTNA gateway based on nginx
 
 After building, you can deploy the Portnox labs:
