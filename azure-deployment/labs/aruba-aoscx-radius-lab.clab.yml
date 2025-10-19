@@ -80,18 +80,18 @@ topology:
     # Portnox RADIUS Gateway (Official Container)
     radius-server:
       kind: linux
-      image: portnox/radius-gateway:latest
+      image: portnox/portnox-radius:latest
       mgmt-ipv4: 172.20.20.50
       env:
         # Required: Get these from Portnox Cloud
-        RADIUS_GATEWAY_ORG_ID: your-org-id-here
-        RADIUS_GATEWAY_PROFILE: your-profile-name-here
-        RADIUS_GATEWAY_TOKEN: your-gateway-token-here
+        PORTNOX_ORG_ID: your-org-id-here
+        PORTNOX_PROFILE: your-profile-name-here
+        PORTNOX_TOKEN: your-gateway-token-here
         # Optional: Custom configuration
-        RADIUS_GATEWAY_NAME: aruba-radius-gateway
-        RADIUS_GATEWAY_LOG_LEVEL: info
-        RADIUS_GATEWAY_PORT: 1812
-        RADIUS_GATEWAY_ACCT_PORT: 1813
+        PORTNOX_NAME: aruba-radius-gateway
+        PORTNOX_LOG_LEVEL: info
+        RADIUS_PORT: 1812
+        RADIUS_ACCT_PORT: 1813
       ports:
         - "1812:1812/udp"
         - "1813:1813/udp"
@@ -99,17 +99,32 @@ topology:
     # Portnox AutoUpdate (Official Container)
     portnox-autoupdate:
       kind: linux
-      image: portnox/autoupdate:latest
+      image: portnox/portnox-autoupdate:latest
       mgmt-ipv4: 172.20.20.51
       env:
         # Required: Get these from Portnox Cloud
-        AUTOUPDATE_ORG_ID: your-org-id-here
-        AUTOUPDATE_TOKEN: your-autoupdate-token-here
+        PORTNOX_ORG_ID: your-org-id-here
+        PORTNOX_TOKEN: your-autoupdate-token-here
         # Optional: Custom configuration
-        AUTOUPDATE_CHECK_INTERVAL: 3600
-        AUTOUPDATE_LOG_LEVEL: info
+        UPDATE_CHECK_INTERVAL: 3600
+        PORTNOX_LOG_LEVEL: info
       binds:
         - /var/run/docker.sock:/var/run/docker.sock
+    
+    # Portnox DHCP Proxy (Official Container)
+    portnox-dhcp:
+      kind: linux
+      image: portnox/portnox-dhcp:latest
+      mgmt-ipv4: 172.20.20.52
+      network_mode: host
+      env:
+        # Required: Get these from Portnox Cloud
+        PORTNOX_ORG_ID: your-org-id-here
+        PORTNOX_TOKEN: your-dhcp-token-here
+        DHCP_INTERFACE: eth1
+        # Optional: Custom configuration
+        PORTNOX_NAME: aruba-dhcp-proxy
+        PORTNOX_LOG_LEVEL: info
     
     # LDAP Server (OpenLDAP)
     ldap-server:

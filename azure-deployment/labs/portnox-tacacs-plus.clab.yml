@@ -9,34 +9,51 @@ topology:
     # Portnox TACACS+ Gateway (Official Container)
     portnox-tacacs:
       kind: linux
-      image: portnox/tacacs-gateway:latest
+      image: portnox/portnox-tacacs:latest
       mgmt-ipv4: 172.20.21.10
       ports:
         - "49:49/tcp"  # TACACS+
       env:
         # Required: Get these from Portnox Cloud
-        TACACS_GATEWAY_ORG_ID: your-org-id-here
-        TACACS_GATEWAY_PROFILE: your-profile-name-here
-        TACACS_GATEWAY_TOKEN: your-gateway-token-here
+        PORTNOX_ORG_ID: your-org-id-here
+        PORTNOX_PROFILE: your-profile-name-here
+        PORTNOX_TOKEN: your-gateway-token-here
         # Optional: Custom configuration
-        TACACS_GATEWAY_NAME: multi-vendor-tacacs-gateway
-        TACACS_GATEWAY_LOG_LEVEL: info
-        TACACS_GATEWAY_PORT: 49
+        PORTNOX_NAME: multi-vendor-tacacs-gateway
+        PORTNOX_LOG_LEVEL: info
+        TACACS_PORT: 49
     
     # Portnox AutoUpdate (Official Container)
     portnox-autoupdate:
       kind: linux
-      image: portnox/autoupdate:latest
+      image: portnox/portnox-autoupdate:latest
       mgmt-ipv4: 172.20.21.11
       env:
         # Required: Get these from Portnox Cloud
-        AUTOUPDATE_ORG_ID: your-org-id-here
-        AUTOUPDATE_TOKEN: your-autoupdate-token-here
+        PORTNOX_ORG_ID: your-org-id-here
+        PORTNOX_TOKEN: your-autoupdate-token-here
         # Optional: Custom configuration
-        AUTOUPDATE_CHECK_INTERVAL: 3600
-        AUTOUPDATE_LOG_LEVEL: info
+        UPDATE_CHECK_INTERVAL: 3600
+        PORTNOX_LOG_LEVEL: info
       binds:
         - /var/run/docker.sock:/var/run/docker.sock
+    
+    # Portnox SIEM Forwarder (Official Container)
+    portnox-siem:
+      kind: linux
+      image: portnox/portnox-siem:latest
+      mgmt-ipv4: 172.20.21.12
+      env:
+        # Required: Get these from Portnox Cloud
+        PORTNOX_ORG_ID: your-org-id-here
+        PORTNOX_TOKEN: your-siem-token-here
+        SIEM_SERVER: siem.example.com
+        SIEM_PORT: 514
+        # Optional: Custom configuration
+        PORTNOX_NAME: tacacs-siem-forwarder
+        PORTNOX_LOG_LEVEL: info
+        SIEM_PROTOCOL: tcp
+        SIEM_FORMAT: cef
 
     # Cisco Router (TACACS+ Client)
     cisco-router:

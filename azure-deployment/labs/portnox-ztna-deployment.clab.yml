@@ -16,26 +16,24 @@ topology:
         - "8443:8443"
       env:
         # Required: Get these from Portnox Cloud
-        ZTNA_GATEWAY_ORG_ID: your-org-id-here
-        ZTNA_GATEWAY_TOKEN: your-gateway-token-here
+        PORTNOX_ORG_ID: your-org-id-here
+        PORTNOX_TOKEN: your-gateway-token-here
         # Optional: Custom configuration
-        ZTNA_GATEWAY_NAME: enterprise-ztna-gateway
-        ZTNA_GATEWAY_LOG_LEVEL: info
-        ZTNA_GATEWAY_PORT: 443
-        ZTNA_GATEWAY_ADMIN_PORT: 8443
+        PORTNOX_NAME: enterprise-ztna-gateway
+        PORTNOX_LOG_LEVEL: info
     
     # Portnox AutoUpdate (Official Container)
     portnox-autoupdate:
       kind: linux
-      image: portnox/autoupdate:latest
+      image: portnox/portnox-autoupdate:latest
       mgmt-ipv4: 172.20.22.11
       env:
         # Required: Get these from Portnox Cloud
-        AUTOUPDATE_ORG_ID: your-org-id-here
-        AUTOUPDATE_TOKEN: your-autoupdate-token-here
+        PORTNOX_ORG_ID: your-org-id-here
+        PORTNOX_TOKEN: your-autoupdate-token-here
         # Optional: Custom configuration
-        AUTOUPDATE_CHECK_INTERVAL: 3600
-        AUTOUPDATE_LOG_LEVEL: info
+        UPDATE_CHECK_INTERVAL: 3600
+        PORTNOX_LOG_LEVEL: info
       binds:
         - /var/run/docker.sock:/var/run/docker.sock
 
