@@ -77,38 +77,54 @@ topology:
         VOICE_VLAN: 20
         GUEST_VLAN: 30
     
-    # Portnox RADIUS Server
+    # Portnox RADIUS Gateway (Official Container)
     radius-server:
       kind: linux
-      image: portnox/radius:latest
+      image: portnox/portnox-radius:latest
       mgmt-ipv4: 172.20.20.50
       env:
-        # RADIUS configuration
-        RADIUS_SECRET: testing123
-        RADIUS_CLIENTS: 0.0.0.0/0
-        # LDAP integration
-        LDAP_ENABLED: "true"
-        LDAP_SERVER: ldap://172.20.20.60
-        LDAP_BASE_DN: dc=example,dc=com
-        LDAP_BIND_DN: cn=admin,dc=example,dc=com
-        LDAP_BIND_PASSWORD: password
-        # EAP methods
-        EAP_TLS_ENABLED: "true"
-        EAP_TTLS_ENABLED: "true"
-        EAP_PEAP_ENABLED: "true"
-        # Certificate settings
-        CA_CERT_PATH: /etc/raddb/certs/ca.pem
-        SERVER_CERT_PATH: /etc/raddb/certs/server.pem
-        SERVER_KEY_PATH: /etc/raddb/certs/server.key
-        # Logging
-        LOG_LEVEL: debug
-        LOG_AUTH: "true"
-        LOG_AUTH_BADPASS: "true"
-        LOG_AUTH_GOODPASS: "true"
+        # Required: Get these from Portnox Cloud
+        PORTNOX_ORG_ID: your-org-id-here
+        PORTNOX_PROFILE: your-profile-name-here
+        PORTNOX_TOKEN: your-gateway-token-here
+        # Optional: Custom configuration
+        PORTNOX_NAME: aruba-radius-gateway
+        PORTNOX_LOG_LEVEL: info
+        RADIUS_PORT: 1812
+        RADIUS_ACCT_PORT: 1813
       ports:
         - "1812:1812/udp"
         - "1813:1813/udp"
-        - "18120:18120/tcp"
+    
+    # Portnox AutoUpdate (Official Container)
+    portnox-autoupdate:
+      kind: linux
+      image: portnox/portnox-autoupdate:latest
+      mgmt-ipv4: 172.20.20.51
+      env:
+        # Required: Get these from Portnox Cloud
+        PORTNOX_ORG_ID: your-org-id-here
+        PORTNOX_TOKEN: your-autoupdate-token-here
+        # Optional: Custom configuration
+        UPDATE_CHECK_INTERVAL: 3600
+        PORTNOX_LOG_LEVEL: info
+      binds:
+        - /var/run/docker.sock:/var/run/docker.sock
+    
+    # Portnox DHCP Proxy (Official Container)
+    portnox-dhcp:
+      kind: linux
+      image: portnox/portnox-dhcp:latest
+      mgmt-ipv4: 172.20.20.52
+      network_mode: host
+      env:
+        # Required: Get these from Portnox Cloud
+        PORTNOX_ORG_ID: your-org-id-here
+        PORTNOX_TOKEN: your-dhcp-token-here
+        DHCP_INTERFACE: eth1
+        # Optional: Custom configuration
+        PORTNOX_NAME: aruba-dhcp-proxy
+        PORTNOX_LOG_LEVEL: info
     
     # LDAP Server (OpenLDAP)
     ldap-server:

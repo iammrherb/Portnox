@@ -535,95 +535,269 @@ echo "Image built successfully: vrnetlab/vr-$VENDOR:$VERSION"
 
 ---
 
-## Custom Portnox Images
+## Official Portnox Containers
 
-### RADIUS Server (FreeRADIUS)
+**IMPORTANT**: Use official Portnox containers from Docker Hub. Do NOT build custom containers.
 
-```dockerfile
-FROM freeradius/freeradius-server:latest
+### RADIUS Gateway
 
-RUN apt-get update && apt-get install -y \
-    freeradius-ldap \
-    freeradius-krb5 \
-    freeradius-postgresql \
-    freeradius-mysql \
-    freeradius-rest \
-    openssl
+**Docker Hub**: https://hub.docker.com/r/portnox/portnox-radius  
+**Documentation**: https://docs.portnox.com/topics/radius_local_docker
 
-EXPOSE 1812/udp 1813/udp 18120/tcp
-```
-
-**Environment Variables:**
 ```bash
-RADIUS_SECRET=testing123
-RADIUS_CLIENTS=0.0.0.0/0
-LDAP_SERVER=ldap://ldap.example.com
-LDAP_BASE_DN=dc=example,dc=com
-LDAP_BIND_DN=cn=admin,dc=example,dc=com
-LDAP_BIND_PASSWORD=password
-KRB5_REALM=EXAMPLE.COM
-KRB5_KDC=kdc.example.com
-DB_TYPE=postgresql
-DB_HOST=postgres
-DB_PORT=5432
-DB_NAME=radius
-DB_USER=radius
-DB_PASSWORD=password
+docker pull portnox/portnox-radius:latest
 ```
 
-### TACACS+ Server
-
-```dockerfile
-FROM ubuntu:22.04
-
-RUN apt-get update && apt-get install -y tacacs+
-
-EXPOSE 49/tcp
-```
-
-**Environment Variables:**
+**Required Environment Variables:**
 ```bash
-TACACS_KEY=tacacskey123
-TACACS_ADMIN_USER=admin
-TACACS_ADMIN_PASSWORD=admin
-TACACS_OPERATOR_USER=operator
-TACACS_OPERATOR_PASSWORD=operator
-LDAP_SERVER=ldap://ldap.example.com
-LDAP_BASE_DN=dc=example,dc=com
-AD_DOMAIN=example.com
-AD_SERVER=ad.example.com
-SAML_IDP_URL=https://idp.example.com
-SAML_ENTITY_ID=tacacs-server
+PORTNOX_ORG_ID=your-org-id                 # From Portnox Cloud
+PORTNOX_PROFILE=your-profile-name          # Profile name in Portnox Cloud
+PORTNOX_TOKEN=your-gateway-token           # Authentication token from Portnox Cloud
+```
+
+**Optional Environment Variables:**
+```bash
+PORTNOX_NAME=my-radius-gateway             # Custom gateway name
+PORTNOX_LOG_LEVEL=info                     # Log level (debug, info, warn, error)
+RADIUS_PORT=1812                           # RADIUS authentication port
+RADIUS_ACCT_PORT=1813                      # RADIUS accounting port
+```
+
+**Deployment Example:**
+```bash
+docker run -d \
+  --name portnox-radius \
+  -p 1812:1812/udp \
+  -p 1813:1813/udp \
+  -e PORTNOX_ORG_ID=your-org-id \
+  -e PORTNOX_PROFILE=your-profile \
+  -e PORTNOX_TOKEN=your-token \
+  portnox/portnox-radius:latest
+```
+
+### TACACS+ Gateway
+
+**Docker Hub**: https://hub.docker.com/r/portnox/portnox-tacacs  
+**Documentation**: https://docs.portnox.com/topics/tacacs_local_docker
+
+```bash
+docker pull portnox/portnox-tacacs:latest
+```
+
+**Required Environment Variables:**
+```bash
+PORTNOX_ORG_ID=your-org-id                 # From Portnox Cloud
+PORTNOX_PROFILE=your-profile-name          # Profile name in Portnox Cloud
+PORTNOX_TOKEN=your-gateway-token           # Authentication token from Portnox Cloud
+```
+
+**Optional Environment Variables:**
+```bash
+PORTNOX_NAME=my-tacacs-gateway             # Custom gateway name
+PORTNOX_LOG_LEVEL=info                     # Log level (debug, info, warn, error)
+TACACS_PORT=49                             # TACACS+ port
+```
+
+**Deployment Example:**
+```bash
+docker run -d \
+  --name portnox-tacacs \
+  -p 49:49/tcp \
+  -e PORTNOX_ORG_ID=your-org-id \
+  -e PORTNOX_PROFILE=your-profile \
+  -e PORTNOX_TOKEN=your-token \
+  portnox/portnox-tacacs:latest
 ```
 
 ### ZTNA Gateway
 
-```dockerfile
-FROM nginx:alpine
+**Docker Hub**: https://hub.docker.com/r/portnox/ztna-gateway  
+**Documentation**: https://docs.portnox.com/topics/ztna_hosted_linux
 
-RUN apk add --no-cache openssl curl jq
-
-EXPOSE 443 8443
+```bash
+docker pull portnox/ztna-gateway:latest
 ```
+
+**Required Environment Variables:**
+```bash
+ZTNA_GATEWAY_ORG_ID=your-org-id            # From Portnox Cloud
+ZTNA_GATEWAY_TOKEN=your-gateway-token      # Authentication token from Portnox Cloud
+```
+
+**Optional Environment Variables:**
+```bash
+ZTNA_GATEWAY_NAME=my-ztna-gateway          # Custom gateway name
+ZTNA_GATEWAY_LOG_LEVEL=info                # Log level (debug, info, warn, error)
+ZTNA_GATEWAY_PORT=443                      # HTTPS port
+ZTNA_GATEWAY_ADMIN_PORT=8443               # Admin port
+```
+
+**Deployment Example:**
+```bash
+docker run -d \
+  --name portnox-ztna \
+  -p 443:443/tcp \
+  -p 8443:8443/tcp \
+  -e ZTNA_GATEWAY_ORG_ID=your-org-id \
+  -e ZTNA_GATEWAY_TOKEN=your-token \
+  portnox/ztna-gateway:latest
+```
+
+### AutoUpdate
+
+**Docker Hub**: https://hub.docker.com/r/portnox/portnox-autoupdate  
+**Documentation**: https://docs.portnox.com/topics/docker_autoupdate
+
+```bash
+docker pull portnox/portnox-autoupdate:latest
+```
+
+**Required Environment Variables:**
+```bash
+PORTNOX_ORG_ID=your-org-id                 # From Portnox Cloud
+PORTNOX_TOKEN=your-autoupdate-token        # Authentication token from Portnox Cloud
+```
+
+**Optional Environment Variables:**
+```bash
+UPDATE_CHECK_INTERVAL=3600                 # Check interval in seconds (default: 1 hour)
+PORTNOX_LOG_LEVEL=info                     # Log level (debug, info, warn, error)
+```
+
+**Deployment Example:**
+```bash
+docker run -d \
+  --name portnox-autoupdate \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -e PORTNOX_ORG_ID=your-org-id \
+  -e PORTNOX_TOKEN=your-token \
+  portnox/portnox-autoupdate:latest
+```
+
+### DHCP Proxy
+
+**Docker Hub**: https://hub.docker.com/r/portnox/portnox-dhcp  
+**Documentation**: https://docs.portnox.com/topics/dhcp_proxy
+
+```bash
+docker pull portnox/portnox-dhcp:latest
+```
+
+**Required Environment Variables:**
+```bash
+PORTNOX_ORG_ID=your-org-id                 # From Portnox Cloud
+PORTNOX_TOKEN=your-dhcp-token              # Authentication token from Portnox Cloud
+DHCP_INTERFACE=eth0                        # Network interface to monitor
+```
+
+**Optional Environment Variables:**
+```bash
+PORTNOX_NAME=my-dhcp-proxy                 # Custom proxy name
+PORTNOX_LOG_LEVEL=info                     # Log level (debug, info, warn, error)
+DHCP_SERVER=172.16.0.1                     # DHCP server IP (optional)
+DHCP_RELAY_MODE=false                      # Enable relay mode
+```
+
+**Deployment Example:**
+```bash
+docker run -d \
+  --name portnox-dhcp \
+  --network host \
+  -e PORTNOX_ORG_ID=your-org-id \
+  -e PORTNOX_TOKEN=your-token \
+  -e DHCP_INTERFACE=eth0 \
+  portnox/portnox-dhcp:latest
+```
+
+### SIEM Forwarder
+
+**Docker Hub**: https://hub.docker.com/r/portnox/portnox-siem  
+**Documentation**: https://docs.portnox.com/topics/siem_integration
+
+```bash
+docker pull portnox/portnox-siem:latest
+```
+
+**Required Environment Variables:**
+```bash
+PORTNOX_ORG_ID=your-org-id                 # From Portnox Cloud
+PORTNOX_TOKEN=your-siem-token              # Authentication token from Portnox Cloud
+SIEM_SERVER=siem.example.com               # SIEM server hostname/IP
+SIEM_PORT=514                              # SIEM server port
+```
+
+**Optional Environment Variables:**
+```bash
+PORTNOX_NAME=my-siem-forwarder             # Custom forwarder name
+PORTNOX_LOG_LEVEL=info                     # Log level (debug, info, warn, error)
+SIEM_PROTOCOL=tcp                          # Protocol (tcp, udp, tls)
+SIEM_FORMAT=cef                            # Log format (cef, json, syslog)
+TLS_VERIFY=true                            # Verify TLS certificates
+```
+
+**Deployment Example:**
+```bash
+docker run -d \
+  --name portnox-siem \
+  -e PORTNOX_ORG_ID=your-org-id \
+  -e PORTNOX_TOKEN=your-token \
+  -e SIEM_SERVER=siem.example.com \
+  -e SIEM_PORT=514 \
+  -e SIEM_PROTOCOL=tcp \
+  portnox/portnox-siem:latest
+```
+
+### Unifi Agent
+
+**Docker Hub**: https://hub.docker.com/r/portnox/portnox-unifi-agent  
+**Documentation**: https://docs.portnox.com/topics/unifi_integration
+
+```bash
+docker pull portnox/portnox-unifi-agent:latest
+```
+
+**Required Environment Variables:**
+```bash
+PORTNOX_ORG_ID=your-org-id                 # From Portnox Cloud
+PORTNOX_TOKEN=your-unifi-token             # Authentication token from Portnox Cloud
+UNIFI_CONTROLLER=unifi.example.com         # Unifi Controller hostname/IP
+UNIFI_USERNAME=admin                       # Unifi admin username
+UNIFI_PASSWORD=password                    # Unifi admin password
+```
+
+**Optional Environment Variables:**
+```bash
+PORTNOX_NAME=my-unifi-agent                # Custom agent name
+PORTNOX_LOG_LEVEL=info                     # Log level (debug, info, warn, error)
+UNIFI_PORT=8443                            # Unifi Controller port
+UNIFI_SITE=default                         # Unifi site name
+SYNC_INTERVAL=300                          # Sync interval in seconds
+```
+
+**Deployment Example:**
+```bash
+docker run -d \
+  --name portnox-unifi \
+  -e PORTNOX_ORG_ID=your-org-id \
+  -e PORTNOX_TOKEN=your-token \
+  -e UNIFI_CONTROLLER=unifi.example.com \
+  -e UNIFI_USERNAME=admin \
+  -e UNIFI_PASSWORD=password \
+  portnox/portnox-unifi-agent:latest
+```
+
+### NXLog Forwarder
+
+**Documentation**: https://docs.portnox.com/topics/integrate_nxlog#docker
+
+For log forwarding to Portnox Cloud, configure NXLog with Docker integration.
 
 **Environment Variables:**
 ```bash
-ZTNA_DOMAIN=ztna.example.com
-ZTNA_CONTROLLER=https://controller.example.com
-ZTNA_API_KEY=your-api-key
-IDP_TYPE=azure-ad
-IDP_TENANT_ID=your-tenant-id
-IDP_CLIENT_ID=your-client-id
-IDP_CLIENT_SECRET=your-client-secret
-OKTA_DOMAIN=example.okta.com
-OKTA_CLIENT_ID=your-client-id
-OKTA_CLIENT_SECRET=your-client-secret
-GOOGLE_CLIENT_ID=your-client-id
-GOOGLE_CLIENT_SECRET=your-client-secret
-MFA_REQUIRED=true
-POSTURE_CHECK_ENABLED=true
-EDR_INTEGRATION=crowdstrike
-EDR_API_KEY=your-edr-api-key
+NXLOG_SERVER=logs.portnox.com              # Portnox log server
+NXLOG_PORT=6514                            # Syslog TLS port
+NXLOG_ORG_ID=your-org-id                   # From Portnox Cloud
+NXLOG_TOKEN=your-nxlog-token               # Authentication token
 ```
 
 ---
@@ -924,6 +1098,256 @@ make docker-image
 docker tag ghcr.io/nokia/srlinux:latest srlinux:latest
 docker tag vrnetlab/vr-xrv9k:7.3.2 vrnetlab/vr-xrv9k:latest
 ```
+
+---
+
+## SR Labs ContainerLab Repositories
+
+**Organization**: https://github.com/srl-labs
+
+SR Labs provides 66+ repositories with comprehensive network lab topologies, tools, and integrations for ContainerLab. All labs are production-ready and extensively documented.
+
+### Core Infrastructure
+
+**containerlab** - Main ContainerLab project  
+https://github.com/srl-labs/containerlab
+
+**vrnetlab** - Virtual network lab builder for vendor images  
+https://github.com/srl-labs/vrnetlab
+
+**clabernetes** - Kubernetes integration for ContainerLab  
+https://github.com/srl-labs/clabernetes
+
+### Nokia SR Linux Labs
+
+**learn-srlinux** - SR Linux learning resources  
+https://github.com/srl-labs/learn-srlinux
+
+**srlinux-getting-started** - Getting started guide  
+https://github.com/srl-labs/srlinux-getting-started
+
+**srl-telemetry-lab** - Telemetry and streaming lab  
+https://github.com/srl-labs/srl-telemetry-lab
+
+**srl-controller** - SR Linux controller  
+https://github.com/srl-labs/srl-controller
+
+**srl-features-lab** - Feature demonstration lab  
+https://github.com/srl-labs/srl-features-lab
+
+**srl-elk-lab** - ELK stack integration  
+https://github.com/srl-labs/srl-elk-lab
+
+**srl-splunk-lab** - Splunk integration  
+https://github.com/srl-labs/srl-splunk-lab
+
+**srl-k8s-anycast-lab** - Kubernetes anycast lab  
+https://github.com/srl-labs/srl-k8s-anycast-lab
+
+**srl-evpn-mh-lab** - EVPN multihoming lab  
+https://github.com/srl-labs/srl-evpn-mh-lab
+
+**srl-l3evpn-mh-lab** - L3 EVPN multihoming lab  
+https://github.com/srl-labs/srl-l3evpn-mh-lab
+
+**srl-rt5-l3evpn-basics-lab** - RT5 L3 EVPN basics  
+https://github.com/srl-labs/srl-rt5-l3evpn-basics-lab
+
+**srl-netbox-demo** - NetBox integration demo  
+https://github.com/srl-labs/srl-netbox-demo
+
+**srl-mirroring-lab** - Traffic mirroring lab  
+https://github.com/srl-labs/srl-mirroring-lab
+
+**srl-bfd-lab** - BFD (Bidirectional Forwarding Detection) lab  
+https://github.com/srl-labs/srl-bfd-lab
+
+**srl-acl-lab** - ACL configuration lab  
+https://github.com/srl-labs/srl-acl-lab
+
+**srl-snmp-framework-lab** - SNMP framework lab  
+https://github.com/srl-labs/srl-snmp-framework-lab
+
+**srlinux-vlan-handling-lab** - VLAN handling lab  
+https://github.com/srl-labs/srlinux-vlan-handling-lab
+
+**srlinux-eos-vlan-handling-lab** - EOS VLAN handling  
+https://github.com/srl-labs/srlinux-eos-vlan-handling-lab
+
+### Multi-Vendor Labs
+
+**multivendor-evpn-lab** - Multi-vendor EVPN lab  
+https://github.com/srl-labs/multivendor-evpn-lab
+
+**nokia-evpn-lab** - Nokia EVPN lab  
+https://github.com/srl-labs/nokia-evpn-lab
+
+**nokia-segment-routing-lab** - Segment routing lab  
+https://github.com/srl-labs/nokia-segment-routing-lab
+
+**nokia-basic-dci-lab** - Basic DCI lab  
+https://github.com/srl-labs/nokia-basic-dci-lab
+
+**srl-sros-telemetry-lab** - SR Linux + SR OS telemetry  
+https://github.com/srl-labs/srl-sros-telemetry-lab
+
+**sros-anysec-lab** - SR OS AnySec lab  
+https://github.com/srl-labs/sros-anysec-lab
+
+**sros-anysec-macsec-lab** - SR OS AnySec MACsec lab  
+https://github.com/srl-labs/sros-anysec-macsec-lab
+
+### Security & Authentication
+
+**freeradius-lab** - FreeRADIUS integration lab  
+https://github.com/srl-labs/freeradius-lab
+
+### Development Tools
+
+**srlinux-scrapli** - Scrapli integration for SR Linux  
+https://github.com/srl-labs/srlinux-scrapli
+
+**srlinux-gnmi-go** - gNMI Go client  
+https://github.com/srl-labs/srlinux-gnmi-go
+
+**ygotsrl** - YANG to Go bindings  
+https://github.com/srl-labs/ygotsrl
+
+**ndk-dev-environment** - NDK development environment  
+https://github.com/srl-labs/ndk-dev-environment
+
+**ndk-greeter-go** - NDK greeter example (Go)  
+https://github.com/srl-labs/ndk-greeter-go
+
+**ndk-configtopus** - NDK configuration tool  
+https://github.com/srl-labs/ndk-configtopus
+
+**ndk-proto-doc** - NDK protocol documentation  
+https://github.com/srl-labs/ndk-proto-doc
+
+**ndk-sshx** - NDK SSH extension  
+https://github.com/srl-labs/ndk-sshx
+
+**pydantic-srlinux** - Pydantic models for SR Linux  
+https://github.com/srl-labs/pydantic-srlinux
+
+### Automation & Orchestration
+
+**jsonrpc-ansible** - JSON-RPC Ansible modules  
+https://github.com/srl-labs/jsonrpc-ansible
+
+**nornir-srl** - Nornir integration  
+https://github.com/srl-labs/nornir-srl
+
+**intent-based-ansible-lab** - Intent-based networking lab  
+https://github.com/srl-labs/intent-based-ansible-lab
+
+**ansible-core** - Ansible core modules  
+https://github.com/srl-labs/ansible-core
+
+**srxnam2022-cicd-demo** - CI/CD demo  
+https://github.com/srl-labs/srxnam2022-cicd-demo
+
+**netbox-nrx-clab** - NetBox integration  
+https://github.com/srl-labs/netbox-nrx-clab
+
+### Monitoring & Observability
+
+**opergroup-lab** - Operational group lab  
+https://github.com/srl-labs/opergroup-lab
+
+**logging-with-loki-lab** - Loki logging lab  
+https://github.com/srl-labs/logging-with-loki-lab
+
+### Utilities & Tools
+
+**yang-browser** - YANG browser tool  
+https://github.com/srl-labs/yang-browser
+
+**gnxi-browser** - gNxI browser  
+https://github.com/srl-labs/gnxi-browser
+
+**protoc-container** - Protocol buffer compiler container  
+https://github.com/srl-labs/protoc-container
+
+**network-multitool** - Network troubleshooting multitool  
+https://github.com/srl-labs/network-multitool
+
+**bird-container** - BIRD routing daemon container  
+https://github.com/srl-labs/bird-container
+
+**irrd-container** - IRRd container  
+https://github.com/srl-labs/irrd-container
+
+**http-client-server-lab** - HTTP client/server lab  
+https://github.com/srl-labs/http-client-server-lab
+
+**MultiCLI** - Multi-device CLI tool  
+https://github.com/srl-labs/MultiCLI
+
+**uptime-cli-plugin** - Uptime CLI plugin  
+https://github.com/srl-labs/uptime-cli-plugin
+
+**bond** - Network bonding tool  
+https://github.com/srl-labs/bond
+
+**ovgs** - Open vSwitch tool  
+https://github.com/srl-labs/ovgs
+
+### IDE & Editor Integration
+
+**vscode-containerlab** - VS Code extension  
+https://github.com/srl-labs/vscode-containerlab
+
+**srlinux-pygments** - Pygments syntax highlighting  
+https://github.com/srl-labs/srlinux-pygments
+
+### Visualization & Documentation
+
+**clab-io-draw** - Draw.io integration  
+https://github.com/srl-labs/clab-io-draw
+
+**clab-api-server** - ContainerLab API server  
+https://github.com/srl-labs/clab-api-server
+
+### Workshops & Training
+
+**clab-workshop** - ContainerLab workshop  
+https://github.com/srl-labs/clab-workshop
+
+**containerlab-workshop-ch** - Swiss workshop  
+https://github.com/srl-labs/containerlab-workshop-ch
+
+### Platform Integration
+
+**wsl-containerlab** - WSL integration  
+https://github.com/srl-labs/wsl-containerlab
+
+**netlab** - Network lab automation  
+https://github.com/srl-labs/netlab
+
+**containerlab-border0.com** - Border0 integration  
+https://github.com/srl-labs/containerlab-border0.com
+
+### Usage in Deployment
+
+All SR Labs repositories can be cloned and deployed alongside the Portnox ContainerLab deployment:
+
+```bash
+# Clone specific lab
+git clone https://github.com/srl-labs/multivendor-evpn-lab.git
+cd multivendor-evpn-lab
+sudo containerlab deploy -t topology.clab.yml
+
+# Clone all labs (for comprehensive deployment)
+mkdir -p /data/srl-labs
+cd /data/srl-labs
+for repo in containerlab vrnetlab learn-srlinux srl-telemetry-lab multivendor-evpn-lab; do
+  git clone https://github.com/srl-labs/$repo.git
+done
+```
+
+**Note**: Many SR Labs topologies require VRNetlab images. See the EVE_NG_CONVERSION_GUIDE.md for building vendor images.
 
 ---
 
