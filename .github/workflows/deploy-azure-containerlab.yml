@@ -282,6 +282,12 @@ jobs:
               fi
             done
             
+            # Deploy SR Labs topologies
+            echo "Deploying SR Labs topologies..."
+            if [ -f /tmp/deploy-srlabs-topologies.sh ]; then
+              sudo /tmp/deploy-srlabs-topologies.sh
+            fi
+            
             # List deployed labs
             sudo containerlab inspect --all
           EOF

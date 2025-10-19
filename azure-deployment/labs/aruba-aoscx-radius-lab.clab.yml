@@ -116,7 +116,6 @@ topology:
       kind: linux
       image: portnox/portnox-dhcp:latest
       mgmt-ipv4: 172.20.20.52
-      network_mode: host
       env:
         # Required: Get these from Portnox Cloud
         PORTNOX_ORG_ID: your-org-id-here
