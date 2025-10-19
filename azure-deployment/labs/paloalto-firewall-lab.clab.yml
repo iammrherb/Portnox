@@ -1,0 +1,125 @@
+name: paloalto-firewall-lab
+
+topology:
+  nodes:
+    # Palo Alto Firewall
+    pan-fw-1:
+      kind: paloalto_panos
+      image: vrnetlab/vr-pan:latest
+      mgmt-ipv4: 172.20.20.40
+      cpu: 4
+      memory: 8GB
+      startup-config: |
+        set deviceconfig system hostname pan-fw-1
+        set deviceconfig system dns-setting servers primary 8.8.8.8
+        set mgt-config users admin password admin
+        set mgt-config users admin permissions role-based superuser yes
+        
+        # Management Interface
+        set deviceconfig system ip-address 172.20.20.40 netmask 255.255.255.0 default-gateway 172.20.20.1
+        
+        # Interfaces
+        set network interface ethernet ethernet1/1 layer3 ip 10.3.1.1/24
+        set network interface ethernet ethernet1/2 layer3 ip 10.3.2.1/24
+        set network interface ethernet ethernet1/3 layer3 ip 10.3.3.1/24
+        
+        # Virtual Router
+        set network virtual-router default interface [ ethernet1/1 ethernet1/2 ethernet1/3 ]
+        
+        # Security Zones
+        set zone trust network layer3 [ ethernet1/1 ]
+        set zone untrust network layer3 [ ethernet1/2 ]
+        set zone dmz network layer3 [ ethernet1/3 ]
+        
+        # Security Policies
+        set rulebase security rules allow-outbound from trust to untrust source any destination any application any service any action allow
+        set rulebase security rules allow-dmz from trust to dmz source any destination any application any service any action allow
+        
+        # RADIUS Authentication
+        set shared server-profile radius radius-server-1 server 172.20.20.101
+        set shared server-profile radius radius-server-1 protocol RADIUS
+        set shared server-profile radius radius-server-1 port 1812
+        set shared server-profile radius radius-server-1 secret testing123
+        
+        # TACACS+ Authentication
+        set shared server-profile tacplus tacacs-server-1 server 172.20.20.100
+        set shared server-profile tacplus tacacs-server-1 port 49
+        set shared server-profile tacplus tacacs-server-1 secret tacacskey123
+        
+        # Authentication Profile
+        set shared authentication-profile admin-auth method TACACS+ tacplus-server-profile tacacs-server-1
+        set shared authentication-profile admin-auth method RADIUS radius-server-profile radius-server-1
+        
+        # GlobalProtect
+        set network interface ethernet ethernet1/1 layer3 dhcp-client
+        
+        commit
+    
+    # Internal Router
+    internal-router:
+      kind: linux
+      image: frrouting/frr:latest
+      mgmt-ipv4: 172.20.20.41
+      exec:
+        - ip addr add 10.3.1.2/24 dev eth1
+        - ip link set eth1 up
+    
+    # External Router
+    external-router:
+      kind: linux
+      image: frrouting/frr:latest
+      mgmt-ipv4: 172.20.20.42
+      exec:
+        - ip addr add 10.3.2.2/24 dev eth1
+        - ip link set eth1 up
+    
+    # DMZ Server
+    dmz-server:
+      kind: linux
+      image: nginx:alpine
+      mgmt-ipv4: 172.20.20.43
+      exec:
+        - ip addr add 10.3.3.2/24 dev eth1
+        - ip link set eth1 up
+    
+    # RADIUS Server
+    radius-server:
+      kind: linux
+      image: portnox/radius:latest
+      mgmt-ipv4: 172.20.20.101
+      ports:
+        - 1812:1812/udp
+        - 1813:1813/udp
+    
+    # TACACS+ Server
+    tacacs-server:
+      kind: linux
+      image: portnox/tacacs:latest
+      mgmt-ipv4: 172.20.20.100
+      ports:
+        - 49:49/tcp
+    
+    # Test Clients
+    internal-client:
+      kind: linux
+      image: nicolaka/netshoot:latest
+      mgmt-ipv4: 172.20.20.204
+      exec:
+        - ip addr add 10.3.1.10/24 dev eth1
+        - ip route add default via 10.3.1.1
+        - ip link set eth1 up
+    
+    external-client:
+      kind: linux
+      image: nicolaka/netshoot:latest
+      mgmt-ipv4: 172.20.20.205
+      exec:
+        - ip addr add 10.3.2.10/24 dev eth1
+        - ip link set eth1 up
+  
+  links:
+    - endpoints: ["pan-fw-1:eth1", "internal-router:eth1"]
+    - endpoints: ["pan-fw-1:eth2", "external-router:eth1"]
+    - endpoints: ["pan-fw-1:eth3", "dmz-server:eth1"]
+    - endpoints: ["internal-router:eth2", "internal-client:eth1"]
+    - endpoints: ["external-router:eth2", "external-client:eth1"]

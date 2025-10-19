@@ -584,13 +584,40 @@ echo "✓ Python $(python3 --version | awk '{print $2}')"
 echo "✓ kubectl $(kubectl version --client --short 2>/dev/null | awk '{print $3}')"
 echo "✓ Helm $(helm version --short | awk '{print $1}')"
 echo ""
-echo "Next steps:"
-echo "  1. Log out and log back in for group changes to take effect"
-echo "  2. Run setup-antimony.sh to install Antimony GUI"
-echo "  3. Run import-images.sh to import container images"
-echo "  4. Deploy labs from /data/labs directory"
+
+log_info "Setting up Antimony GUI..."
+if [ -f /tmp/setup-antimony.sh ]; then
+    bash /tmp/setup-antimony.sh || log_warning "Antimony setup failed, but continuing..."
+else
+    log_warning "Antimony setup script not found at /tmp/setup-antimony.sh"
+fi
+
+log_info "Importing container images..."
+if [ -f /tmp/import-images-comprehensive.sh ]; then
+    bash /tmp/import-images-comprehensive.sh || log_warning "Image import failed, but continuing..."
+elif [ -f /tmp/import-images.sh ]; then
+    bash /tmp/import-images.sh || log_warning "Image import failed, but continuing..."
+else
+    log_warning "Image import script not found"
+fi
+
 echo ""
-echo "For help, run: clab-manage"
+echo "╔═══════════════════════════════════════════════════════════════════╗"
+echo "║                    Deployment Complete!                          ║"
+echo "╚═══════════════════════════════════════════════════════════════════╝"
+echo ""
+echo "Access your lab environment:"
+echo "  • Antimony GUI: http://$(hostname -I | awk '{print $1}'):8080"
+echo "  • SSH: ssh azureuser@$(hostname -I | awk '{print $1}')"
+echo "  • Labs directory: /data/labs"
+echo ""
+echo "Quick start commands:"
+echo "  • List labs: sudo containerlab inspect --all"
+echo "  • Deploy lab: sudo containerlab deploy -t /data/labs/<lab-file>"
+echo "  • Destroy lab: sudo containerlab destroy -t /data/labs/<lab-file>"
+echo "  • View images: docker images"
+echo ""
+echo "For detailed documentation, see: /data/COMPREHENSIVE_GUIDE.md"
 echo ""
 
 exit 0

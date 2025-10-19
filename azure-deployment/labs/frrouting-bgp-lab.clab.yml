@@ -1,0 +1,266 @@
+name: frrouting-bgp-lab
+
+topology:
+  nodes:
+    # FRRouting BGP Routers
+    frr-router-1:
+      kind: linux
+      image: frrouting/frr:latest
+      mgmt-ipv4: 172.20.20.70
+      binds:
+        - frr-router-1-config:/etc/frr
+      exec:
+        - |
+          cat > /etc/frr/daemons <<EOF
+          bgpd=yes
+          ospfd=yes
+          zebra=yes
+          EOF
+        - |
+          cat > /etc/frr/frr.conf <<EOF
+          frr version 9.0
+          frr defaults traditional
+          hostname frr-router-1
+          log syslog informational
+          service integrated-vtysh-config
+          !
+          password admin
+          enable password admin
+          !
+          interface eth1
+           ip address 10.6.1.1/24
+          !
+          interface eth2
+           ip address 10.6.2.1/24
+          !
+          router bgp 65100
+           bgp router-id 10.6.0.1
+           neighbor 10.6.1.2 remote-as 65200
+           neighbor 10.6.2.2 remote-as 65300
+           !
+           address-family ipv4 unicast
+            network 10.6.0.0/24
+            neighbor 10.6.1.2 activate
+            neighbor 10.6.2.2 activate
+           exit-address-family
+          !
+          router ospf
+           network 10.6.0.0/16 area 0
+          !
+          line vty
+           exec-timeout 0 0
+          !
+          EOF
+        - /usr/lib/frr/frrinit.sh start
+    
+    frr-router-2:
+      kind: linux
+      image: frrouting/frr:latest
+      mgmt-ipv4: 172.20.20.71
+      binds:
+        - frr-router-2-config:/etc/frr
+      exec:
+        - |
+          cat > /etc/frr/daemons <<EOF
+          bgpd=yes
+          ospfd=yes
+          zebra=yes
+          EOF
+        - |
+          cat > /etc/frr/frr.conf <<EOF
+          frr version 9.0
+          frr defaults traditional
+          hostname frr-router-2
+          log syslog informational
+          service integrated-vtysh-config
+          !
+          password admin
+          enable password admin
+          !
+          interface eth1
+           ip address 10.6.1.2/24
+          !
+          interface eth2
+           ip address 10.6.3.1/24
+          !
+          router bgp 65200
+           bgp router-id 10.6.0.2
+           neighbor 10.6.1.1 remote-as 65100
+           neighbor 10.6.3.2 remote-as 65300
+           !
+           address-family ipv4 unicast
+            network 10.6.10.0/24
+            neighbor 10.6.1.1 activate
+            neighbor 10.6.3.2 activate
+           exit-address-family
+          !
+          router ospf
+           network 10.6.0.0/16 area 0
+          !
+          line vty
+           exec-timeout 0 0
+          !
+          EOF
+        - /usr/lib/frr/frrinit.sh start
+    
+    frr-router-3:
+      kind: linux
+      image: frrouting/frr:latest
+      mgmt-ipv4: 172.20.20.72
+      binds:
+        - frr-router-3-config:/etc/frr
+      exec:
+        - |
+          cat > /etc/frr/daemons <<EOF
+          bgpd=yes
+          ospfd=yes
+          zebra=yes
+          EOF
+        - |
+          cat > /etc/frr/frr.conf <<EOF
+          frr version 9.0
+          frr defaults traditional
+          hostname frr-router-3
+          log syslog informational
+          service integrated-vtysh-config
+          !
+          password admin
+          enable password admin
+          !
+          interface eth1
+           ip address 10.6.2.2/24
+          !
+          interface eth2
+           ip address 10.6.3.2/24
+          !
+          router bgp 65300
+           bgp router-id 10.6.0.3
+           neighbor 10.6.2.1 remote-as 65100
+           neighbor 10.6.3.1 remote-as 65200
+           !
+           address-family ipv4 unicast
+            network 10.6.20.0/24
+            neighbor 10.6.2.1 activate
+            neighbor 10.6.3.1 activate
+           exit-address-family
+          !
+          router ospf
+           network 10.6.0.0/16 area 0
+          !
+          line vty
+           exec-timeout 0 0
+          !
+          EOF
+        - /usr/lib/frr/frrinit.sh start
+    
+    # Route Reflector
+    frr-rr-1:
+      kind: linux
+      image: frrouting/frr:latest
+      mgmt-ipv4: 172.20.20.73
+      binds:
+        - frr-rr-1-config:/etc/frr
+      exec:
+        - |
+          cat > /etc/frr/daemons <<EOF
+          bgpd=yes
+          ospfd=yes
+          zebra=yes
+          EOF
+        - |
+          cat > /etc/frr/frr.conf <<EOF
+          frr version 9.0
+          frr defaults traditional
+          hostname frr-rr-1
+          log syslog informational
+          service integrated-vtysh-config
+          !
+          password admin
+          enable password admin
+          !
+          interface eth1
+           ip address 10.6.4.1/24
+          !
+          router bgp 65100
+           bgp router-id 10.6.0.10
+           bgp cluster-id 10.6.0.10
+           neighbor 10.6.1.1 remote-as 65100
+           neighbor 10.6.1.1 route-reflector-client
+           !
+           address-family ipv4 unicast
+            neighbor 10.6.1.1 activate
+           exit-address-family
+          !
+          router ospf
+           network 10.6.0.0/16 area 0
+          !
+          line vty
+           exec-timeout 0 0
+          !
+          EOF
+        - /usr/lib/frr/frrinit.sh start
+    
+    # Test Clients
+    client-net-1:
+      kind: linux
+      image: nicolaka/netshoot:latest
+      mgmt-ipv4: 172.20.20.211
+      exec:
+        - ip addr add 10.6.0.10/24 dev eth1
+        - ip route add default via 10.6.0.1
+        - ip link set eth1 up
+    
+    client-net-2:
+      kind: linux
+      image: nicolaka/netshoot:latest
+      mgmt-ipv4: 172.20.20.212
+      exec:
+        - ip addr add 10.6.10.10/24 dev eth1
+        - ip route add default via 10.6.10.1
+        - ip link set eth1 up
+    
+    client-net-3:
+      kind: linux
+      image: nicolaka/netshoot:latest
+      mgmt-ipv4: 172.20.20.213
+      exec:
+        - ip addr add 10.6.20.10/24 dev eth1
+        - ip route add default via 10.6.20.1
+        - ip link set eth1 up
+    
+    # Monitoring
+    prometheus:
+      kind: linux
+      image: prom/prometheus:latest
+      mgmt-ipv4: 172.20.20.90
+      ports:
+        - 9090:9090/tcp
+      binds:
+        - prometheus-config:/etc/prometheus
+      exec:
+        - |
+          cat > /etc/prometheus/prometheus.yml <<EOF
+          global:
+            scrape_interval: 15s
+          
+          scrape_configs:
+            - job_name: 'frrouting'
+              static_configs:
+                - targets: ['172.20.20.70:9100', '172.20.20.71:9100', '172.20.20.72:9100']
+          EOF
+    
+    grafana:
+      kind: linux
+      image: grafana/grafana:latest
+      mgmt-ipv4: 172.20.20.91
+      ports:
+        - 3000:3000/tcp
+      env:
+        GF_SECURITY_ADMIN_PASSWORD: admin
+        GF_SECURITY_ADMIN_USER: admin
+  
+  links:
+    - endpoints: ["frr-router-1:eth1", "frr-router-2:eth1"]
+    - endpoints: ["frr-router-1:eth2", "frr-router-3:eth1"]
+    - endpoints: ["frr-router-2:eth2", "frr-router-3:eth2"]
+    - endpoints: ["frr-router-1:eth3", "frr-rr-1:eth1"]

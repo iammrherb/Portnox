@@ -257,12 +257,15 @@ jobs:
       - name: Set SSH Key Permissions
         run: chmod 600 deployment-artifacts/azure_key
 
-      - name: Copy lab configurations
+      - name: Copy lab configurations and documentation
         run: |
           VM_HOST=$(cat deployment-artifacts/vm_hostname.txt)
           
           scp -o StrictHostKeyChecking=no -i deployment-artifacts/azure_key \
             -r azure-deployment/labs/* azureuser@$VM_HOST:/data/labs/
+          
+          scp -o StrictHostKeyChecking=no -i deployment-artifacts/azure_key \
+            azure-deployment/COMPREHENSIVE_GUIDE.md azureuser@$VM_HOST:/data/
 
       - name: Deploy labs
         run: |
@@ -306,7 +309,11 @@ jobs:
           VM_HOST=$(cat deployment-artifacts/vm_hostname.txt)
           
           ssh -o StrictHostKeyChecking=no -i deployment-artifacts/azure_key azureuser@$VM_HOST << 'EOF'
-            sudo /tmp/import-images.sh
+            if [ -f /tmp/import-images-comprehensive.sh ]; then
+              sudo /tmp/import-images-comprehensive.sh
+            else
+              sudo /tmp/import-images.sh
+            fi
           EOF
 
   setup-antimony:

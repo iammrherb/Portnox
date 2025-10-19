@@ -1,0 +1,146 @@
+name: cisco-ios-xr-lab
+
+topology:
+  defaults:
+    kind: cisco_xrv9k
+  
+  nodes:
+    # Cisco IOS-XR Routers
+    xr-core-1:
+      kind: cisco_xrv9k
+      image: vrnetlab/vr-xrv9k:latest
+      mgmt-ipv4: 172.20.20.10
+      cpu: 2
+      memory: 4GB
+      startup-config: |
+        hostname xr-core-1
+        username admin
+         group root-lr
+         group cisco-support
+         secret 10 $6$admin
+        !
+        interface MgmtEth0/RP0/CPU0/0
+         ipv4 address dhcp
+        !
+        interface GigabitEthernet0/0/0/0
+         ipv4 address 10.0.1.1 255.255.255.0
+         no shutdown
+        !
+        interface GigabitEthernet0/0/0/1
+         ipv4 address 10.0.2.1 255.255.255.0
+         no shutdown
+        !
+        router ospf 1
+         area 0
+          interface GigabitEthernet0/0/0/0
+          interface GigabitEthernet0/0/0/1
+         !
+        !
+        aaa authentication login default local
+        aaa authorization exec default local
+        !
+        tacacs-server host 172.20.20.100 port 49
+         key tacacskey123
+        !
+        aaa group server tacacs+ TACACS
+         server 172.20.20.100
+        !
+        aaa authentication login default group TACACS local
+        aaa authorization exec default group TACACS local
+        !
+        end
+    
+    xr-edge-1:
+      kind: cisco_xrv9k
+      image: vrnetlab/vr-xrv9k:latest
+      mgmt-ipv4: 172.20.20.11
+      cpu: 2
+      memory: 4GB
+      startup-config: |
+        hostname xr-edge-1
+        username admin
+         group root-lr
+         group cisco-support
+         secret 10 $6$admin
+        !
+        interface MgmtEth0/RP0/CPU0/0
+         ipv4 address dhcp
+        !
+        interface GigabitEthernet0/0/0/0
+         ipv4 address 10.0.1.2 255.255.255.0
+         no shutdown
+        !
+        interface GigabitEthernet0/0/0/1
+         ipv4 address 10.0.3.1 255.255.255.0
+         no shutdown
+        !
+        router ospf 1
+         area 0
+          interface GigabitEthernet0/0/0/0
+          interface GigabitEthernet0/0/0/1
+         !
+        !
+        aaa authentication login default local
+        aaa authorization exec default local
+        !
+        tacacs-server host 172.20.20.100 port 49
+         key tacacskey123
+        !
+        end
+    
+    xr-edge-2:
+      kind: cisco_xrv9k
+      image: vrnetlab/vr-xrv9k:latest
+      mgmt-ipv4: 172.20.20.12
+      cpu: 2
+      memory: 4GB
+      startup-config: |
+        hostname xr-edge-2
+        username admin
+         group root-lr
+         group cisco-support
+         secret 10 $6$admin
+        !
+        interface MgmtEth0/RP0/CPU0/0
+         ipv4 address dhcp
+        !
+        interface GigabitEthernet0/0/0/0
+         ipv4 address 10.0.2.2 255.255.255.0
+         no shutdown
+        !
+        interface GigabitEthernet0/0/0/1
+         ipv4 address 10.0.4.1 255.255.255.0
+         no shutdown
+        !
+        router ospf 1
+         area 0
+          interface GigabitEthernet0/0/0/0
+          interface GigabitEthernet0/0/0/1
+         !
+        !
+        aaa authentication login default local
+        aaa authorization exec default local
+        !
+        tacacs-server host 172.20.20.100 port 49
+         key tacacskey123
+        !
+        end
+    
+    # TACACS+ Server
+    tacacs-server:
+      kind: linux
+      image: portnox/tacacs:latest
+      mgmt-ipv4: 172.20.20.100
+      ports:
+        - 49:49/tcp
+    
+    # Test Client
+    test-client:
+      kind: linux
+      image: nicolaka/netshoot:latest
+      mgmt-ipv4: 172.20.20.200
+  
+  links:
+    - endpoints: ["xr-core-1:eth1", "xr-edge-1:eth1"]
+    - endpoints: ["xr-core-1:eth2", "xr-edge-2:eth1"]
+    - endpoints: ["xr-edge-1:eth2", "test-client:eth1"]
