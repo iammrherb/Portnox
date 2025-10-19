@@ -541,26 +541,26 @@ echo "Image built successfully: vrnetlab/vr-$VENDOR:$VERSION"
 
 ### RADIUS Gateway
 
-**Docker Hub**: https://hub.docker.com/r/portnox/radius-gateway  
+**Docker Hub**: https://hub.docker.com/r/portnox/portnox-radius  
 **Documentation**: https://docs.portnox.com/topics/radius_local_docker
 
 ```bash
-docker pull portnox/radius-gateway:latest
+docker pull portnox/portnox-radius:latest
 ```
 
 **Required Environment Variables:**
 ```bash
-RADIUS_GATEWAY_ORG_ID=your-org-id          # From Portnox Cloud
-RADIUS_GATEWAY_PROFILE=your-profile-name   # Profile name in Portnox Cloud
-RADIUS_GATEWAY_TOKEN=your-gateway-token    # Authentication token from Portnox Cloud
+PORTNOX_ORG_ID=your-org-id                 # From Portnox Cloud
+PORTNOX_PROFILE=your-profile-name          # Profile name in Portnox Cloud
+PORTNOX_TOKEN=your-gateway-token           # Authentication token from Portnox Cloud
 ```
 
 **Optional Environment Variables:**
 ```bash
-RADIUS_GATEWAY_NAME=my-radius-gateway      # Custom gateway name
-RADIUS_GATEWAY_LOG_LEVEL=info              # Log level (debug, info, warn, error)
-RADIUS_GATEWAY_PORT=1812                   # RADIUS authentication port
-RADIUS_GATEWAY_ACCT_PORT=1813              # RADIUS accounting port
+PORTNOX_NAME=my-radius-gateway             # Custom gateway name
+PORTNOX_LOG_LEVEL=info                     # Log level (debug, info, warn, error)
+RADIUS_PORT=1812                           # RADIUS authentication port
+RADIUS_ACCT_PORT=1813                      # RADIUS accounting port
 ```
 
 **Deployment Example:**
@@ -569,33 +569,33 @@ docker run -d \
   --name portnox-radius \
   -p 1812:1812/udp \
   -p 1813:1813/udp \
-  -e RADIUS_GATEWAY_ORG_ID=your-org-id \
-  -e RADIUS_GATEWAY_PROFILE=your-profile \
-  -e RADIUS_GATEWAY_TOKEN=your-token \
-  portnox/radius-gateway:latest
+  -e PORTNOX_ORG_ID=your-org-id \
+  -e PORTNOX_PROFILE=your-profile \
+  -e PORTNOX_TOKEN=your-token \
+  portnox/portnox-radius:latest
 ```
 
 ### TACACS+ Gateway
 
-**Docker Hub**: https://hub.docker.com/r/portnox/tacacs-gateway  
+**Docker Hub**: https://hub.docker.com/r/portnox/portnox-tacacs  
 **Documentation**: https://docs.portnox.com/topics/tacacs_local_docker
 
 ```bash
-docker pull portnox/tacacs-gateway:latest
+docker pull portnox/portnox-tacacs:latest
 ```
 
 **Required Environment Variables:**
 ```bash
-TACACS_GATEWAY_ORG_ID=your-org-id          # From Portnox Cloud
-TACACS_GATEWAY_PROFILE=your-profile-name   # Profile name in Portnox Cloud
-TACACS_GATEWAY_TOKEN=your-gateway-token    # Authentication token from Portnox Cloud
+PORTNOX_ORG_ID=your-org-id                 # From Portnox Cloud
+PORTNOX_PROFILE=your-profile-name          # Profile name in Portnox Cloud
+PORTNOX_TOKEN=your-gateway-token           # Authentication token from Portnox Cloud
 ```
 
 **Optional Environment Variables:**
 ```bash
-TACACS_GATEWAY_NAME=my-tacacs-gateway      # Custom gateway name
-TACACS_GATEWAY_LOG_LEVEL=info              # Log level (debug, info, warn, error)
-TACACS_GATEWAY_PORT=49                     # TACACS+ port
+PORTNOX_NAME=my-tacacs-gateway             # Custom gateway name
+PORTNOX_LOG_LEVEL=info                     # Log level (debug, info, warn, error)
+TACACS_PORT=49                             # TACACS+ port
 ```
 
 **Deployment Example:**
@@ -603,10 +603,10 @@ TACACS_GATEWAY_PORT=49                     # TACACS+ port
 docker run -d \
   --name portnox-tacacs \
   -p 49:49/tcp \
-  -e TACACS_GATEWAY_ORG_ID=your-org-id \
-  -e TACACS_GATEWAY_PROFILE=your-profile \
-  -e TACACS_GATEWAY_TOKEN=your-token \
-  portnox/tacacs-gateway:latest
+  -e PORTNOX_ORG_ID=your-org-id \
+  -e PORTNOX_PROFILE=your-profile \
+  -e PORTNOX_TOKEN=your-token \
+  portnox/portnox-tacacs:latest
 ```
 
 ### ZTNA Gateway
@@ -645,23 +645,23 @@ docker run -d \
 
 ### AutoUpdate
 
-**Docker Hub**: https://hub.docker.com/r/portnox/autoupdate  
+**Docker Hub**: https://hub.docker.com/r/portnox/portnox-autoupdate  
 **Documentation**: https://docs.portnox.com/topics/docker_autoupdate
 
 ```bash
-docker pull portnox/autoupdate:latest
+docker pull portnox/portnox-autoupdate:latest
 ```
 
 **Required Environment Variables:**
 ```bash
-AUTOUPDATE_ORG_ID=your-org-id              # From Portnox Cloud
-AUTOUPDATE_TOKEN=your-autoupdate-token     # Authentication token from Portnox Cloud
+PORTNOX_ORG_ID=your-org-id                 # From Portnox Cloud
+PORTNOX_TOKEN=your-autoupdate-token        # Authentication token from Portnox Cloud
 ```
 
 **Optional Environment Variables:**
 ```bash
-AUTOUPDATE_CHECK_INTERVAL=3600             # Check interval in seconds (default: 1 hour)
-AUTOUPDATE_LOG_LEVEL=info                  # Log level (debug, info, warn, error)
+UPDATE_CHECK_INTERVAL=3600                 # Check interval in seconds (default: 1 hour)
+PORTNOX_LOG_LEVEL=info                     # Log level (debug, info, warn, error)
 ```
 
 **Deployment Example:**
@@ -669,9 +669,121 @@ AUTOUPDATE_LOG_LEVEL=info                  # Log level (debug, info, warn, error
 docker run -d \
   --name portnox-autoupdate \
   -v /var/run/docker.sock:/var/run/docker.sock \
-  -e AUTOUPDATE_ORG_ID=your-org-id \
-  -e AUTOUPDATE_TOKEN=your-token \
-  portnox/autoupdate:latest
+  -e PORTNOX_ORG_ID=your-org-id \
+  -e PORTNOX_TOKEN=your-token \
+  portnox/portnox-autoupdate:latest
+```
+
+### DHCP Proxy
+
+**Docker Hub**: https://hub.docker.com/r/portnox/portnox-dhcp  
+**Documentation**: https://docs.portnox.com/topics/dhcp_proxy
+
+```bash
+docker pull portnox/portnox-dhcp:latest
+```
+
+**Required Environment Variables:**
+```bash
+PORTNOX_ORG_ID=your-org-id                 # From Portnox Cloud
+PORTNOX_TOKEN=your-dhcp-token              # Authentication token from Portnox Cloud
+DHCP_INTERFACE=eth0                        # Network interface to monitor
+```
+
+**Optional Environment Variables:**
+```bash
+PORTNOX_NAME=my-dhcp-proxy                 # Custom proxy name
+PORTNOX_LOG_LEVEL=info                     # Log level (debug, info, warn, error)
+DHCP_SERVER=172.16.0.1                     # DHCP server IP (optional)
+DHCP_RELAY_MODE=false                      # Enable relay mode
+```
+
+**Deployment Example:**
+```bash
+docker run -d \
+  --name portnox-dhcp \
+  --network host \
+  -e PORTNOX_ORG_ID=your-org-id \
+  -e PORTNOX_TOKEN=your-token \
+  -e DHCP_INTERFACE=eth0 \
+  portnox/portnox-dhcp:latest
+```
+
+### SIEM Forwarder
+
+**Docker Hub**: https://hub.docker.com/r/portnox/portnox-siem  
+**Documentation**: https://docs.portnox.com/topics/siem_integration
+
+```bash
+docker pull portnox/portnox-siem:latest
+```
+
+**Required Environment Variables:**
+```bash
+PORTNOX_ORG_ID=your-org-id                 # From Portnox Cloud
+PORTNOX_TOKEN=your-siem-token              # Authentication token from Portnox Cloud
+SIEM_SERVER=siem.example.com               # SIEM server hostname/IP
+SIEM_PORT=514                              # SIEM server port
+```
+
+**Optional Environment Variables:**
+```bash
+PORTNOX_NAME=my-siem-forwarder             # Custom forwarder name
+PORTNOX_LOG_LEVEL=info                     # Log level (debug, info, warn, error)
+SIEM_PROTOCOL=tcp                          # Protocol (tcp, udp, tls)
+SIEM_FORMAT=cef                            # Log format (cef, json, syslog)
+TLS_VERIFY=true                            # Verify TLS certificates
+```
+
+**Deployment Example:**
+```bash
+docker run -d \
+  --name portnox-siem \
+  -e PORTNOX_ORG_ID=your-org-id \
+  -e PORTNOX_TOKEN=your-token \
+  -e SIEM_SERVER=siem.example.com \
+  -e SIEM_PORT=514 \
+  -e SIEM_PROTOCOL=tcp \
+  portnox/portnox-siem:latest
+```
+
+### Unifi Agent
+
+**Docker Hub**: https://hub.docker.com/r/portnox/portnox-unifi-agent  
+**Documentation**: https://docs.portnox.com/topics/unifi_integration
+
+```bash
+docker pull portnox/portnox-unifi-agent:latest
+```
+
+**Required Environment Variables:**
+```bash
+PORTNOX_ORG_ID=your-org-id                 # From Portnox Cloud
+PORTNOX_TOKEN=your-unifi-token             # Authentication token from Portnox Cloud
+UNIFI_CONTROLLER=unifi.example.com         # Unifi Controller hostname/IP
+UNIFI_USERNAME=admin                       # Unifi admin username
+UNIFI_PASSWORD=password                    # Unifi admin password
+```
+
+**Optional Environment Variables:**
+```bash
+PORTNOX_NAME=my-unifi-agent                # Custom agent name
+PORTNOX_LOG_LEVEL=info                     # Log level (debug, info, warn, error)
+UNIFI_PORT=8443                            # Unifi Controller port
+UNIFI_SITE=default                         # Unifi site name
+SYNC_INTERVAL=300                          # Sync interval in seconds
+```
+
+**Deployment Example:**
+```bash
+docker run -d \
+  --name portnox-unifi \
+  -e PORTNOX_ORG_ID=your-org-id \
+  -e PORTNOX_TOKEN=your-token \
+  -e UNIFI_CONTROLLER=unifi.example.com \
+  -e UNIFI_USERNAME=admin \
+  -e UNIFI_PASSWORD=password \
+  portnox/portnox-unifi-agent:latest
 ```
 
 ### NXLog Forwarder
