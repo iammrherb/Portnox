@@ -1101,6 +1101,256 @@ docker tag vrnetlab/vr-xrv9k:7.3.2 vrnetlab/vr-xrv9k:latest
 
 ---
 
+## SR Labs ContainerLab Repositories
+
+**Organization**: https://github.com/srl-labs
+
+SR Labs provides 66+ repositories with comprehensive network lab topologies, tools, and integrations for ContainerLab. All labs are production-ready and extensively documented.
+
+### Core Infrastructure
+
+**containerlab** - Main ContainerLab project  
+https://github.com/srl-labs/containerlab
+
+**vrnetlab** - Virtual network lab builder for vendor images  
+https://github.com/srl-labs/vrnetlab
+
+**clabernetes** - Kubernetes integration for ContainerLab  
+https://github.com/srl-labs/clabernetes
+
+### Nokia SR Linux Labs
+
+**learn-srlinux** - SR Linux learning resources  
+https://github.com/srl-labs/learn-srlinux
+
+**srlinux-getting-started** - Getting started guide  
+https://github.com/srl-labs/srlinux-getting-started
+
+**srl-telemetry-lab** - Telemetry and streaming lab  
+https://github.com/srl-labs/srl-telemetry-lab
+
+**srl-controller** - SR Linux controller  
+https://github.com/srl-labs/srl-controller
+
+**srl-features-lab** - Feature demonstration lab  
+https://github.com/srl-labs/srl-features-lab
+
+**srl-elk-lab** - ELK stack integration  
+https://github.com/srl-labs/srl-elk-lab
+
+**srl-splunk-lab** - Splunk integration  
+https://github.com/srl-labs/srl-splunk-lab
+
+**srl-k8s-anycast-lab** - Kubernetes anycast lab  
+https://github.com/srl-labs/srl-k8s-anycast-lab
+
+**srl-evpn-mh-lab** - EVPN multihoming lab  
+https://github.com/srl-labs/srl-evpn-mh-lab
+
+**srl-l3evpn-mh-lab** - L3 EVPN multihoming lab  
+https://github.com/srl-labs/srl-l3evpn-mh-lab
+
+**srl-rt5-l3evpn-basics-lab** - RT5 L3 EVPN basics  
+https://github.com/srl-labs/srl-rt5-l3evpn-basics-lab
+
+**srl-netbox-demo** - NetBox integration demo  
+https://github.com/srl-labs/srl-netbox-demo
+
+**srl-mirroring-lab** - Traffic mirroring lab  
+https://github.com/srl-labs/srl-mirroring-lab
+
+**srl-bfd-lab** - BFD (Bidirectional Forwarding Detection) lab  
+https://github.com/srl-labs/srl-bfd-lab
+
+**srl-acl-lab** - ACL configuration lab  
+https://github.com/srl-labs/srl-acl-lab
+
+**srl-snmp-framework-lab** - SNMP framework lab  
+https://github.com/srl-labs/srl-snmp-framework-lab
+
+**srlinux-vlan-handling-lab** - VLAN handling lab  
+https://github.com/srl-labs/srlinux-vlan-handling-lab
+
+**srlinux-eos-vlan-handling-lab** - EOS VLAN handling  
+https://github.com/srl-labs/srlinux-eos-vlan-handling-lab
+
+### Multi-Vendor Labs
+
+**multivendor-evpn-lab** - Multi-vendor EVPN lab  
+https://github.com/srl-labs/multivendor-evpn-lab
+
+**nokia-evpn-lab** - Nokia EVPN lab  
+https://github.com/srl-labs/nokia-evpn-lab
+
+**nokia-segment-routing-lab** - Segment routing lab  
+https://github.com/srl-labs/nokia-segment-routing-lab
+
+**nokia-basic-dci-lab** - Basic DCI lab  
+https://github.com/srl-labs/nokia-basic-dci-lab
+
+**srl-sros-telemetry-lab** - SR Linux + SR OS telemetry  
+https://github.com/srl-labs/srl-sros-telemetry-lab
+
+**sros-anysec-lab** - SR OS AnySec lab  
+https://github.com/srl-labs/sros-anysec-lab
+
+**sros-anysec-macsec-lab** - SR OS AnySec MACsec lab  
+https://github.com/srl-labs/sros-anysec-macsec-lab
+
+### Security & Authentication
+
+**freeradius-lab** - FreeRADIUS integration lab  
+https://github.com/srl-labs/freeradius-lab
+
+### Development Tools
+
+**srlinux-scrapli** - Scrapli integration for SR Linux  
+https://github.com/srl-labs/srlinux-scrapli
+
+**srlinux-gnmi-go** - gNMI Go client  
+https://github.com/srl-labs/srlinux-gnmi-go
+
+**ygotsrl** - YANG to Go bindings  
+https://github.com/srl-labs/ygotsrl
+
+**ndk-dev-environment** - NDK development environment  
+https://github.com/srl-labs/ndk-dev-environment
+
+**ndk-greeter-go** - NDK greeter example (Go)  
+https://github.com/srl-labs/ndk-greeter-go
+
+**ndk-configtopus** - NDK configuration tool  
+https://github.com/srl-labs/ndk-configtopus
+
+**ndk-proto-doc** - NDK protocol documentation  
+https://github.com/srl-labs/ndk-proto-doc
+
+**ndk-sshx** - NDK SSH extension  
+https://github.com/srl-labs/ndk-sshx
+
+**pydantic-srlinux** - Pydantic models for SR Linux  
+https://github.com/srl-labs/pydantic-srlinux
+
+### Automation & Orchestration
+
+**jsonrpc-ansible** - JSON-RPC Ansible modules  
+https://github.com/srl-labs/jsonrpc-ansible
+
+**nornir-srl** - Nornir integration  
+https://github.com/srl-labs/nornir-srl
+
+**intent-based-ansible-lab** - Intent-based networking lab  
+https://github.com/srl-labs/intent-based-ansible-lab
+
+**ansible-core** - Ansible core modules  
+https://github.com/srl-labs/ansible-core
+
+**srxnam2022-cicd-demo** - CI/CD demo  
+https://github.com/srl-labs/srxnam2022-cicd-demo
+
+**netbox-nrx-clab** - NetBox integration  
+https://github.com/srl-labs/netbox-nrx-clab
+
+### Monitoring & Observability
+
+**opergroup-lab** - Operational group lab  
+https://github.com/srl-labs/opergroup-lab
+
+**logging-with-loki-lab** - Loki logging lab  
+https://github.com/srl-labs/logging-with-loki-lab
+
+### Utilities & Tools
+
+**yang-browser** - YANG browser tool  
+https://github.com/srl-labs/yang-browser
+
+**gnxi-browser** - gNxI browser  
+https://github.com/srl-labs/gnxi-browser
+
+**protoc-container** - Protocol buffer compiler container  
+https://github.com/srl-labs/protoc-container
+
+**network-multitool** - Network troubleshooting multitool  
+https://github.com/srl-labs/network-multitool
+
+**bird-container** - BIRD routing daemon container  
+https://github.com/srl-labs/bird-container
+
+**irrd-container** - IRRd container  
+https://github.com/srl-labs/irrd-container
+
+**http-client-server-lab** - HTTP client/server lab  
+https://github.com/srl-labs/http-client-server-lab
+
+**MultiCLI** - Multi-device CLI tool  
+https://github.com/srl-labs/MultiCLI
+
+**uptime-cli-plugin** - Uptime CLI plugin  
+https://github.com/srl-labs/uptime-cli-plugin
+
+**bond** - Network bonding tool  
+https://github.com/srl-labs/bond
+
+**ovgs** - Open vSwitch tool  
+https://github.com/srl-labs/ovgs
+
+### IDE & Editor Integration
+
+**vscode-containerlab** - VS Code extension  
+https://github.com/srl-labs/vscode-containerlab
+
+**srlinux-pygments** - Pygments syntax highlighting  
+https://github.com/srl-labs/srlinux-pygments
+
+### Visualization & Documentation
+
+**clab-io-draw** - Draw.io integration  
+https://github.com/srl-labs/clab-io-draw
+
+**clab-api-server** - ContainerLab API server  
+https://github.com/srl-labs/clab-api-server
+
+### Workshops & Training
+
+**clab-workshop** - ContainerLab workshop  
+https://github.com/srl-labs/clab-workshop
+
+**containerlab-workshop-ch** - Swiss workshop  
+https://github.com/srl-labs/containerlab-workshop-ch
+
+### Platform Integration
+
+**wsl-containerlab** - WSL integration  
+https://github.com/srl-labs/wsl-containerlab
+
+**netlab** - Network lab automation  
+https://github.com/srl-labs/netlab
+
+**containerlab-border0.com** - Border0 integration  
+https://github.com/srl-labs/containerlab-border0.com
+
+### Usage in Deployment
+
+All SR Labs repositories can be cloned and deployed alongside the Portnox ContainerLab deployment:
+
+```bash
+# Clone specific lab
+git clone https://github.com/srl-labs/multivendor-evpn-lab.git
+cd multivendor-evpn-lab
+sudo containerlab deploy -t topology.clab.yml
+
+# Clone all labs (for comprehensive deployment)
+mkdir -p /data/srl-labs
+cd /data/srl-labs
+for repo in containerlab vrnetlab learn-srlinux srl-telemetry-lab multivendor-evpn-lab; do
+  git clone https://github.com/srl-labs/$repo.git
+done
+```
+
+**Note**: Many SR Labs topologies require VRNetlab images. See the EVE_NG_CONVERSION_GUIDE.md for building vendor images.
+
+---
+
 ## Additional Resources
 
 - **ContainerLab**: https://containerlab.dev/
