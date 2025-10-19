@@ -535,95 +535,157 @@ echo "Image built successfully: vrnetlab/vr-$VENDOR:$VERSION"
 
 ---
 
-## Custom Portnox Images
+## Official Portnox Containers
 
-### RADIUS Server (FreeRADIUS)
+**IMPORTANT**: Use official Portnox containers from Docker Hub. Do NOT build custom containers.
 
-```dockerfile
-FROM freeradius/freeradius-server:latest
+### RADIUS Gateway
 
-RUN apt-get update && apt-get install -y \
-    freeradius-ldap \
-    freeradius-krb5 \
-    freeradius-postgresql \
-    freeradius-mysql \
-    freeradius-rest \
-    openssl
+**Docker Hub**: https://hub.docker.com/r/portnox/radius-gateway  
+**Documentation**: https://docs.portnox.com/topics/radius_local_docker
 
-EXPOSE 1812/udp 1813/udp 18120/tcp
-```
-
-**Environment Variables:**
 ```bash
-RADIUS_SECRET=testing123
-RADIUS_CLIENTS=0.0.0.0/0
-LDAP_SERVER=ldap://ldap.example.com
-LDAP_BASE_DN=dc=example,dc=com
-LDAP_BIND_DN=cn=admin,dc=example,dc=com
-LDAP_BIND_PASSWORD=password
-KRB5_REALM=EXAMPLE.COM
-KRB5_KDC=kdc.example.com
-DB_TYPE=postgresql
-DB_HOST=postgres
-DB_PORT=5432
-DB_NAME=radius
-DB_USER=radius
-DB_PASSWORD=password
+docker pull portnox/radius-gateway:latest
 ```
 
-### TACACS+ Server
-
-```dockerfile
-FROM ubuntu:22.04
-
-RUN apt-get update && apt-get install -y tacacs+
-
-EXPOSE 49/tcp
-```
-
-**Environment Variables:**
+**Required Environment Variables:**
 ```bash
-TACACS_KEY=tacacskey123
-TACACS_ADMIN_USER=admin
-TACACS_ADMIN_PASSWORD=admin
-TACACS_OPERATOR_USER=operator
-TACACS_OPERATOR_PASSWORD=operator
-LDAP_SERVER=ldap://ldap.example.com
-LDAP_BASE_DN=dc=example,dc=com
-AD_DOMAIN=example.com
-AD_SERVER=ad.example.com
-SAML_IDP_URL=https://idp.example.com
-SAML_ENTITY_ID=tacacs-server
+RADIUS_GATEWAY_ORG_ID=your-org-id          # From Portnox Cloud
+RADIUS_GATEWAY_PROFILE=your-profile-name   # Profile name in Portnox Cloud
+RADIUS_GATEWAY_TOKEN=your-gateway-token    # Authentication token from Portnox Cloud
+```
+
+**Optional Environment Variables:**
+```bash
+RADIUS_GATEWAY_NAME=my-radius-gateway      # Custom gateway name
+RADIUS_GATEWAY_LOG_LEVEL=info              # Log level (debug, info, warn, error)
+RADIUS_GATEWAY_PORT=1812                   # RADIUS authentication port
+RADIUS_GATEWAY_ACCT_PORT=1813              # RADIUS accounting port
+```
+
+**Deployment Example:**
+```bash
+docker run -d \
+  --name portnox-radius \
+  -p 1812:1812/udp \
+  -p 1813:1813/udp \
+  -e RADIUS_GATEWAY_ORG_ID=your-org-id \
+  -e RADIUS_GATEWAY_PROFILE=your-profile \
+  -e RADIUS_GATEWAY_TOKEN=your-token \
+  portnox/radius-gateway:latest
+```
+
+### TACACS+ Gateway
+
+**Docker Hub**: https://hub.docker.com/r/portnox/tacacs-gateway  
+**Documentation**: https://docs.portnox.com/topics/tacacs_local_docker
+
+```bash
+docker pull portnox/tacacs-gateway:latest
+```
+
+**Required Environment Variables:**
+```bash
+TACACS_GATEWAY_ORG_ID=your-org-id          # From Portnox Cloud
+TACACS_GATEWAY_PROFILE=your-profile-name   # Profile name in Portnox Cloud
+TACACS_GATEWAY_TOKEN=your-gateway-token    # Authentication token from Portnox Cloud
+```
+
+**Optional Environment Variables:**
+```bash
+TACACS_GATEWAY_NAME=my-tacacs-gateway      # Custom gateway name
+TACACS_GATEWAY_LOG_LEVEL=info              # Log level (debug, info, warn, error)
+TACACS_GATEWAY_PORT=49                     # TACACS+ port
+```
+
+**Deployment Example:**
+```bash
+docker run -d \
+  --name portnox-tacacs \
+  -p 49:49/tcp \
+  -e TACACS_GATEWAY_ORG_ID=your-org-id \
+  -e TACACS_GATEWAY_PROFILE=your-profile \
+  -e TACACS_GATEWAY_TOKEN=your-token \
+  portnox/tacacs-gateway:latest
 ```
 
 ### ZTNA Gateway
 
-```dockerfile
-FROM nginx:alpine
+**Docker Hub**: https://hub.docker.com/r/portnox/ztna-gateway  
+**Documentation**: https://docs.portnox.com/topics/ztna_hosted_linux
 
-RUN apk add --no-cache openssl curl jq
-
-EXPOSE 443 8443
+```bash
+docker pull portnox/ztna-gateway:latest
 ```
+
+**Required Environment Variables:**
+```bash
+ZTNA_GATEWAY_ORG_ID=your-org-id            # From Portnox Cloud
+ZTNA_GATEWAY_TOKEN=your-gateway-token      # Authentication token from Portnox Cloud
+```
+
+**Optional Environment Variables:**
+```bash
+ZTNA_GATEWAY_NAME=my-ztna-gateway          # Custom gateway name
+ZTNA_GATEWAY_LOG_LEVEL=info                # Log level (debug, info, warn, error)
+ZTNA_GATEWAY_PORT=443                      # HTTPS port
+ZTNA_GATEWAY_ADMIN_PORT=8443               # Admin port
+```
+
+**Deployment Example:**
+```bash
+docker run -d \
+  --name portnox-ztna \
+  -p 443:443/tcp \
+  -p 8443:8443/tcp \
+  -e ZTNA_GATEWAY_ORG_ID=your-org-id \
+  -e ZTNA_GATEWAY_TOKEN=your-token \
+  portnox/ztna-gateway:latest
+```
+
+### AutoUpdate
+
+**Docker Hub**: https://hub.docker.com/r/portnox/autoupdate  
+**Documentation**: https://docs.portnox.com/topics/docker_autoupdate
+
+```bash
+docker pull portnox/autoupdate:latest
+```
+
+**Required Environment Variables:**
+```bash
+AUTOUPDATE_ORG_ID=your-org-id              # From Portnox Cloud
+AUTOUPDATE_TOKEN=your-autoupdate-token     # Authentication token from Portnox Cloud
+```
+
+**Optional Environment Variables:**
+```bash
+AUTOUPDATE_CHECK_INTERVAL=3600             # Check interval in seconds (default: 1 hour)
+AUTOUPDATE_LOG_LEVEL=info                  # Log level (debug, info, warn, error)
+```
+
+**Deployment Example:**
+```bash
+docker run -d \
+  --name portnox-autoupdate \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -e AUTOUPDATE_ORG_ID=your-org-id \
+  -e AUTOUPDATE_TOKEN=your-token \
+  portnox/autoupdate:latest
+```
+
+### NXLog Forwarder
+
+**Documentation**: https://docs.portnox.com/topics/integrate_nxlog#docker
+
+For log forwarding to Portnox Cloud, configure NXLog with Docker integration.
 
 **Environment Variables:**
 ```bash
-ZTNA_DOMAIN=ztna.example.com
-ZTNA_CONTROLLER=https://controller.example.com
-ZTNA_API_KEY=your-api-key
-IDP_TYPE=azure-ad
-IDP_TENANT_ID=your-tenant-id
-IDP_CLIENT_ID=your-client-id
-IDP_CLIENT_SECRET=your-client-secret
-OKTA_DOMAIN=example.okta.com
-OKTA_CLIENT_ID=your-client-id
-OKTA_CLIENT_SECRET=your-client-secret
-GOOGLE_CLIENT_ID=your-client-id
-GOOGLE_CLIENT_SECRET=your-client-secret
-MFA_REQUIRED=true
-POSTURE_CHECK_ENABLED=true
-EDR_INTEGRATION=crowdstrike
-EDR_API_KEY=your-edr-api-key
+NXLOG_SERVER=logs.portnox.com              # Portnox log server
+NXLOG_PORT=6514                            # Syslog TLS port
+NXLOG_ORG_ID=your-org-id                   # From Portnox Cloud
+NXLOG_TOKEN=your-nxlog-token               # Authentication token
 ```
 
 ---
