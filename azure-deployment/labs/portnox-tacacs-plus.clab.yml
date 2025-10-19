@@ -6,18 +6,37 @@ mgmt:
 
 topology:
   nodes:
-    # Portnox TACACS+ Server
+    # Portnox TACACS+ Gateway (Official Container)
     portnox-tacacs:
       kind: linux
-      image: dchidell/docker-tacacs:latest
+      image: portnox/tacacs-gateway:latest
       mgmt-ipv4: 172.20.21.10
       ports:
         - "49:49/tcp"  # TACACS+
-      binds:
-        - /data/configs/tacacs:/etc/tacacs
       env:
-        TACACS_SECRET: tacacskey123
-        TACACS_ENCRYPTION: true
+        # Required: Get these from Portnox Cloud
+        TACACS_GATEWAY_ORG_ID: your-org-id-here
+        TACACS_GATEWAY_PROFILE: your-profile-name-here
+        TACACS_GATEWAY_TOKEN: your-gateway-token-here
+        # Optional: Custom configuration
+        TACACS_GATEWAY_NAME: multi-vendor-tacacs-gateway
+        TACACS_GATEWAY_LOG_LEVEL: info
+        TACACS_GATEWAY_PORT: 49
+    
+    # Portnox AutoUpdate (Official Container)
+    portnox-autoupdate:
+      kind: linux
+      image: portnox/autoupdate:latest
+      mgmt-ipv4: 172.20.21.11
+      env:
+        # Required: Get these from Portnox Cloud
+        AUTOUPDATE_ORG_ID: your-org-id-here
+        AUTOUPDATE_TOKEN: your-autoupdate-token-here
+        # Optional: Custom configuration
+        AUTOUPDATE_CHECK_INTERVAL: 3600
+        AUTOUPDATE_LOG_LEVEL: info
+      binds:
+        - /var/run/docker.sock:/var/run/docker.sock
 
     # Cisco Router (TACACS+ Client)
     cisco-router:
