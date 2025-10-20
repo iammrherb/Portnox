@@ -339,6 +339,9 @@
       "apiVersion": "2021-03-01",
       "name": "[parameters('vmName')]",
       "location": "[parameters('location')]",
+      "identity": {
+        "type": "SystemAssigned"
+      },
       "dependsOn": [
         "[resourceId('Microsoft.Network/networkInterfaces', variables('nicName'))]",
         "[resourceId('Microsoft.Compute/disks', variables('dataDiskName'))]"
@@ -409,6 +412,13 @@
     "containerlabApiUrl": {
       "type": "string",
       "value": "[concat('https://', reference(variables('publicIPAddressName')).dnsSettings.fqdn, ':8443')]"
+    },
+    "vmPrincipalId": {
+      "type": "string",
+      "value": "[reference(parameters('vmName'), '2021-03-01', 'Full').identity.principalId]",
+      "metadata": {
+        "description": "The principal ID of the VM's managed identity for Key Vault access"
+      }
     }
   }
 }

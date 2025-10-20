@@ -1,0 +1,245 @@
+name: Shutdown Azure ContainerLab VM
+
+on:
+  workflow_dispatch:
+    inputs:
+      resource_group:
+        description: 'Azure Resource Group'
+        required: true
+        default: 'portnox-containerlab-rg'
+      vm_name:
+        description: 'VM Name'
+        required: true
+        default: 'portnox-containerlab'
+      shutdown_mode:
+        description: 'Shutdown Mode'
+        required: true
+        type: choice
+        options:
+          - graceful
+          - preserve-labs
+          - destroy-labs
+          - quick
+        default: 'graceful'
+      shutdown_type:
+        description: 'Shutdown Type'
+        required: true
+        type: choice
+        options:
+          - deallocate
+          - stop
+          - shutdown
+        default: 'deallocate'
+      create_backup:
+        description: 'Create backup before shutdown'
+        required: true
+        type: boolean
+        default: false
+
+env:
+  AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+  AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+  AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+
+jobs:
+  shutdown-vm:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: |
+            {
+              "clientId": "${{ secrets.AZURE_CLIENT_ID }}",
+              "clientSecret": "${{ secrets.AZURE_CLIENT_SECRET }}",
+              "subscriptionId": "${{ secrets.AZURE_SUBSCRIPTION_ID }}",
+              "tenantId": "${{ secrets.AZURE_TENANT_ID }}"
+            }
+
+      - name: Get VM connection details
+        id: vm_info
+        run: |
+          VM_IP=$(az vm show \
+            --resource-group ${{ github.event.inputs.resource_group }} \
+            --name ${{ github.event.inputs.vm_name }} \
+            --show-details \
+            --query publicIps \
+            --output tsv)
+          
+          echo "vm_ip=$VM_IP" >> $GITHUB_OUTPUT
+          echo "VM IP: $VM_IP"
+
+      - name: Check if SSH key exists in artifacts
+        id: check_key
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: deployment-artifacts
+          path: deployment-artifacts/
+
+      - name: Generate temporary SSH key if needed
+        if: steps.check_key.outcome == 'failure'
+        run: |
+          echo "No existing SSH key found in artifacts. You'll need to provide your own SSH key."
+          echo "Please ensure you have SSH access to the VM before running this workflow."
+          exit 1
+
+      - name: Set SSH Key Permissions
+        if: steps.check_key.outcome == 'success'
+        run: chmod 600 deployment-artifacts/azure_key
+
+      - name: Copy shutdown script to VM
+        if: steps.check_key.outcome == 'success'
+        run: |
+          scp -o StrictHostKeyChecking=no -i deployment-artifacts/azure_key \
+            azure-deployment/scripts/shutdown-vm.sh azureuser@${{ steps.vm_info.outputs.vm_ip }}:/tmp/
+
+      - name: Run shutdown script on VM
+        if: steps.check_key.outcome == 'success'
+        run: |
+          BACKUP_FLAG=""
+          if [ "${{ github.event.inputs.create_backup }}" = "true" ]; then
+            BACKUP_FLAG="--backup"
+          fi
+          
+          ssh -o StrictHostKeyChecking=no -i deployment-artifacts/azure_key azureuser@${{ steps.vm_info.outputs.vm_ip }} << EOF
+            chmod +x /tmp/shutdown-vm.sh
+            sudo /tmp/shutdown-vm.sh --${{ github.event.inputs.shutdown_mode }} $BACKUP_FLAG
+          EOF
+
+      - name: Wait for VM to shutdown
+        run: |
+          echo "Waiting for VM to shutdown gracefully..."
+          sleep 60
+
+      - name: Deallocate VM (saves ~70% costs)
+        if: github.event.inputs.shutdown_type == 'deallocate'
+        run: |
+          echo "Deallocating VM to save costs..."
+          az vm deallocate \
+            --resource-group ${{ github.event.inputs.resource_group }} \
+            --name ${{ github.event.inputs.vm_name }}
+          
+          echo "VM deallocated successfully"
+          echo "To restart: az vm start --resource-group ${{ github.event.inputs.resource_group }} --name ${{ github.event.inputs.vm_name }}"
+
+      - name: Stop VM (saves ~30% costs)
+        if: github.event.inputs.shutdown_type == 'stop'
+        run: |
+          echo "Stopping VM..."
+          az vm stop \
+            --resource-group ${{ github.event.inputs.resource_group }} \
+            --name ${{ github.event.inputs.vm_name }}
+          
+          echo "VM stopped successfully"
+          echo "To restart: az vm start --resource-group ${{ github.event.inputs.resource_group }} --name ${{ github.event.inputs.vm_name }}"
+
+      - name: Create Shutdown Summary
+        run: |
+          cat << EOF > $GITHUB_STEP_SUMMARY
+          # VM Shutdown Summary
+          
+          ## VM Information
+          - **Resource Group**: ${{ github.event.inputs.resource_group }}
+          - **VM Name**: ${{ github.event.inputs.vm_name }}
+          - **VM IP**: ${{ steps.vm_info.outputs.vm_ip }}
+          
+          ## Shutdown Configuration
+          - **Shutdown Mode**: ${{ github.event.inputs.shutdown_mode }}
+          - **Shutdown Type**: ${{ github.event.inputs.shutdown_type }}
+          - **Backup Created**: ${{ github.event.inputs.create_backup }}
+          
+          ## Shutdown Details
+          
+          ### Shutdown Mode: ${{ github.event.inputs.shutdown_mode }}
+          $(case "${{ github.event.inputs.shutdown_mode }}" in
+            graceful)
+              echo "- All ContainerLab deployments were stopped gracefully"
+              echo "- All Docker containers were stopped"
+              ;;
+            preserve-labs)
+              echo "- Lab state was preserved for resume on restart"
+              echo "- Containers remain in their current state"
+              ;;
+            destroy-labs)
+              echo "- All ContainerLab deployments were destroyed"
+              echo "- Docker resources were cleaned up"
+              ;;
+            quick)
+              echo "- VM was shut down immediately without stopping containers"
+              ;;
+          esac)
+          
+          ### Shutdown Type: ${{ github.event.inputs.shutdown_type }}
+          $(case "${{ github.event.inputs.shutdown_type }}" in
+            deallocate)
+              echo "- VM has been **deallocated** (saves ~70% of costs)"
+              echo "- Public IP may change on restart (unless using Static IP)"
+              echo "- Only storage costs remain"
+              ;;
+            stop)
+              echo "- VM has been **stopped** (saves ~30% of costs)"
+              echo "- Public IP is preserved"
+              echo "- Compute reservation costs remain"
+              ;;
+            shutdown)
+              echo "- VM was shut down via OS command"
+              echo "- Azure still considers VM as running (full costs)"
+              ;;
+          esac)
+          
+          ## Restart Instructions
+          
+          To restart the VM:
+          \`\`\`bash
+          az vm start \\
+            --resource-group ${{ github.event.inputs.resource_group }} \\
+            --name ${{ github.event.inputs.vm_name }}
+          \`\`\`
+          
+          $(if [ "${{ github.event.inputs.shutdown_mode }}" = "preserve-labs" ]; then
+            echo "### Resume Labs"
+            echo "After VM restart, labs will automatically resume if containerlab-autostart service is enabled."
+            echo ""
+            echo "To manually resume a lab:"
+            echo "\`\`\`bash"
+            echo "sudo containerlab deploy -t /data/labs/<lab-name>.clab.yml"
+            echo "\`\`\`"
+          fi)
+          
+          ## Cost Savings
+          
+          $(case "${{ github.event.inputs.shutdown_type }}" in
+            deallocate)
+              echo "**Estimated Monthly Savings**: ~70%"
+              echo "- Only paying for storage (~\$50-100/month for 512GB)"
+              echo "- No compute costs while deallocated"
+              ;;
+            stop)
+              echo "**Estimated Monthly Savings**: ~30%"
+              echo "- Reduced compute costs"
+              echo "- Still paying for compute reservation"
+              ;;
+            shutdown)
+              echo "**Estimated Monthly Savings**: 0%"
+              echo "- Full costs continue"
+              echo "- Recommend using 'deallocate' or 'stop' instead"
+              ;;
+          esac)
+          
+          ## Backup Information
+          
+          $(if [ "${{ github.event.inputs.create_backup }}" = "true" ]; then
+            echo "✅ Backup was created before shutdown"
+            echo "- Location: \`/data/backups/containerlab-backup-<timestamp>.tar.gz\`"
+            echo "- Includes: labs, configs, and images"
+          else
+            echo "⚠️ No backup was created"
+            echo "- Consider creating backups before shutdown for important data"
+          fi)
+          EOF
