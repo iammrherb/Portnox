@@ -20,9 +20,9 @@ fi
 log_info "Installing GUI and authentication tools..."
 echo ""
 
-log_info "Installing XFCE desktop environment..."
-DEBIAN_FRONTEND=noninteractive apt-get update
-DEBIAN_FRONTEND=noninteractive apt-get install -y \
+log_info "Installing XFCE desktop environment (this may take 5-10 minutes)..."
+DEBIAN_FRONTEND=noninteractive apt-get update -qq
+DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
     xfce4 \
     xfce4-goodies \
     xrdp \
@@ -39,20 +39,23 @@ ufw allow 3389/tcp 2>/dev/null || true
 
 log_success "XFCE desktop and XRDP installed"
 
-log_info "Installing Antimony GUI..."
+log_info "Installing Antimony GUI (this may take a few minutes)..."
 
 if ! command -v node &> /dev/null; then
+    log_info "Installing Node.js..."
     curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-    apt-get install -y nodejs
+    DEBIAN_FRONTEND=noninteractive apt-get install -y nodejs
 fi
 
 cd /opt || exit 1
 if [ ! -d "antimony" ]; then
-    git clone https://github.com/srl-labs/containerlab-antimony.git antimony
+    log_info "Cloning Antimony repository..."
+    git clone --depth 1 https://github.com/srl-labs/containerlab-antimony.git antimony
 fi
 
 cd antimony || exit 1
-npm install --production
+log_info "Installing Antimony dependencies (this is the slowest step)..."
+npm install --production --no-audit --no-fund --loglevel=error
 
 cat > /etc/systemd/system/antimony.service <<'EOF'
 [Unit]
@@ -81,8 +84,10 @@ log_success "Antimony GUI installed and running on port 8080"
 
 log_info "Installing EdgeShark..."
 
+echo "wireshark-common wireshark-common/install-setuid boolean true" | debconf-set-selections
+
 # Install dependencies
-apt-get install -y \
+DEBIAN_FRONTEND=noninteractive apt-get install -y \
     wireshark \
     tshark \
     tcpdump \
@@ -329,8 +334,8 @@ log_info "Access Information:"
 echo "  Antimony GUI:    http://${HOSTNAME}:8080 or http://${IP}:8080"
 echo "  EdgeShark:       http://${HOSTNAME}:5001 or http://${IP}:5001"
 echo "  RDP Access:      ${HOSTNAME}:3389 or ${IP}:3389"
-echo "    Username:      azureuser"
-echo "    Password:      (your SSH key password or set with: sudo passwd azureuser)"
+echo "    Username:      labnox"
+echo "    Password:      Iwannarock! (or set with: sudo passwd labnox)"
 echo ""
 log_info "Installed Tools:"
 echo "  test-8021x       - Test 802.1X authentication"
