@@ -5,15 +5,21 @@ Complete automated deployment solution for Portnox ContainerLab environments on 
 ## 🚀 Features
 
 - **Fully Automated Deployment**: One-click deployment to Azure using GitHub Actions
-- **Complete Infrastructure**: ARM template provisions VM, networking, storage, and security
+- **Complete Infrastructure**: ARM template provisions VM, networking, storage, and security with external internet and inter-VNET routing
+- **Official Portnox Containers**: All labs use official Portnox Docker containers (RADIUS, TACACS+, ZTNA Gateway, DHCP Relay, SIEM Forwarder, Auto-Update, UniFi Agent)
 - **Pre-configured Labs**: Ready-to-use topologies for:
   - 802.1X Authentication (RADIUS) with multiple EAP methods
   - TACACS+ Device Administration
   - Zero Trust Network Access (ZTNA)
+  - SR Labs ELK and Splunk integration
+  - Snort IDS network security
+  - HPE Aruba AOS-CX campus networks
 - **Antimony GUI**: Web-based topology management interface
-- **Multi-Vendor Support**: Cisco, Arista, Juniper, Palo Alto, Fortinet, and more
+- **Multi-Vendor Support**: Cisco, Arista, Juniper, Palo Alto, Fortinet, Nokia, Aruba, Dell, and more
+- **Vendor Startup Configs**: Pre-configured startup configs with default credentials for all vendors
 - **VRNetlab Integration**: Support for virtual network device images
 - **Comprehensive Monitoring**: Built-in logging, metrics, and visualization
+- **Flexible Shutdown Options**: Graceful, preserve, destroy, quick, deallocate, stop, backup, and scheduled shutdown
 
 ## 📋 Prerequisites
 
@@ -174,10 +180,10 @@ clab-shell <container-name>
 **File**: `labs/portnox-radius-802.1x.clab.yml`
 
 **Components**:
-- Portnox RADIUS server
+- **Official Portnox RADIUS Gateway** (portnox/portnox-radius:latest)
 - Cisco, Arista, Juniper switches (802.1X authenticators)
 - Test clients with various EAP methods (TLS, PEAP, TTLS)
-- Active Directory / LDAP identity providers
+- Active Directory identity provider
 - Certificate Authority
 - Syslog server
 
@@ -196,9 +202,11 @@ sudo containerlab deploy -t /data/labs/portnox-radius-802.1x.clab.yml
 **File**: `labs/portnox-tacacs-plus.clab.yml`
 
 **Components**:
-- Portnox TACACS+ server
+- **Official Portnox TACACS+ Gateway** (portnox/portnox-tacacs:latest)
+- **Official Portnox Auto-Update Service** (portnox/portnox-autoupdate:latest)
+- **Official Portnox SIEM Forwarder** (portnox/portnox-siem:latest)
 - Multi-vendor network devices (Cisco, Arista, Juniper, Palo Alto, Fortinet)
-- Active Directory / LDAP / SAML identity providers
+- Active Directory / SAML identity providers
 - Audit logging server
 - Jump host for management
 
@@ -217,7 +225,8 @@ sudo containerlab deploy -t /data/labs/portnox-tacacs-plus.clab.yml
 **File**: `labs/portnox-ztna-deployment.clab.yml`
 
 **Components**:
-- ZTNA Gateway and Controller
+- **Official Portnox ZTNA Gateway** (portnox/ztna-gateway:latest)
+- ZTNA Controller
 - Multiple identity providers (Azure AD, Okta, Google Workspace)
 - Protected applications (Web, API, Database, File Server, SSH, RDP)
 - Security services (EDR, Posture Check, MFA)
@@ -234,6 +243,79 @@ sudo containerlab deploy -t /data/labs/portnox-tacacs-plus.clab.yml
 **Deploy**:
 ```bash
 sudo containerlab deploy -t /data/labs/portnox-ztna-deployment.clab.yml
+```
+
+### 4. SR Labs ELK Integration Lab
+**File**: `labs/srl-elk-lab.clab.yml`
+
+**Components**:
+- Nokia SR Linux switches
+- Elasticsearch, Logstash, Kibana (ELK stack)
+- Network telemetry and logging
+
+**Use Cases**:
+- Network telemetry collection
+- Log aggregation and analysis
+- Real-time network monitoring
+
+**Deploy**:
+```bash
+sudo containerlab deploy -t /data/labs/srl-elk-lab.clab.yml
+```
+
+### 5. SR Labs Splunk Integration Lab
+**File**: `labs/srl-splunk-lab.clab.yml`
+
+**Components**:
+- Nokia SR Linux switches
+- Splunk Enterprise
+- Network event forwarding
+
+**Use Cases**:
+- SIEM integration testing
+- Network event correlation
+- Security analytics
+
+**Deploy**:
+```bash
+sudo containerlab deploy -t /data/labs/srl-splunk-lab.clab.yml
+```
+
+### 6. Snort IDS Network Security Lab
+**File**: `labs/ids-snort-lab.clab.yml`
+
+**Components**:
+- Snort IDS/IPS
+- Network traffic generators
+- Attack simulation tools
+
+**Use Cases**:
+- Intrusion detection testing
+- Network security monitoring
+- Attack pattern analysis
+
+**Deploy**:
+```bash
+sudo containerlab deploy -t /data/labs/ids-snort-lab.clab.yml
+```
+
+### 7. HPE Aruba AOS-CX Campus Labs
+**Files**: `labs/aoscx-labs/*.clab.yml`
+
+**Components**:
+- HPE Aruba AOS-CX switches
+- Campus network topologies (OSPF, BGP, VSX)
+- IPv4 and IPv6 configurations
+
+**Use Cases**:
+- Campus network design
+- Routing protocol testing
+- High availability configurations
+
+**Deploy**:
+```bash
+sudo containerlab deploy -t /data/labs/aoscx-labs/aoscx-campus-ospf.clab.yml
+sudo containerlab deploy -t /data/labs/aoscx-labs/aoscx-campus-bgp.clab.yml
 ```
 
 ## 🛠️ VM Specifications
@@ -317,6 +399,15 @@ sudo containerlab deploy -t /data/labs/portnox-ztna-deployment.clab.yml
 
 ## 📚 Documentation
 
+### Project Documentation
+- **[Portnox Containers Reference](PORTNOX_CONTAINERS_REFERENCE.md)**: Complete guide to all official Portnox Docker containers with environment variables
+- **[Vendor Startup Configs](configs/VENDOR_STARTUP_CONFIGS.md)**: Startup configurations and default credentials for all network vendors
+- **[Comprehensive Guide](COMPREHENSIVE_GUIDE.md)**: Detailed deployment and usage guide
+- **[Architecture](ARCHITECTURE.md)**: Technical architecture and design decisions
+- **[Quick Start](QUICKSTART.md)**: Fast deployment guide
+- **[Vendor Image Registry](VENDOR_IMAGE_REGISTRY.md)**: Container image sources and versions
+- **[EVE-NG Conversion Guide](EVE_NG_CONVERSION_GUIDE.md)**: Converting EVE-NG labs to ContainerLab
+
 ### ContainerLab
 - Official docs: https://containerlab.dev
 - Lab examples: https://containerlab.dev/lab-examples/
@@ -329,6 +420,11 @@ sudo containerlab deploy -t /data/labs/portnox-ztna-deployment.clab.yml
 ### Antimony
 - Integrated web GUI for topology management
 - Access at `http://<vm-ip>:8080`
+
+### Portnox
+- Official documentation: https://docs.portnox.com
+- Docker Hub: https://hub.docker.com/u/portnox
+- Support: https://www.portnox.com/support/
 
 ## 🐛 Troubleshooting
 
@@ -403,6 +499,37 @@ sudo apt-get upgrade -y
 ```bash
 sudo /tmp/import-images.sh
 ```
+
+## 🛑 VM Shutdown Options
+
+The deployment includes a comprehensive shutdown script with multiple options:
+
+```bash
+# Graceful shutdown with backup
+sudo /data/scripts/shutdown-vm.sh --graceful --backup
+
+# Quick shutdown without stopping containers
+sudo /data/scripts/shutdown-vm.sh --quick
+
+# Destroy all labs and deallocate VM (saves ~70% costs)
+sudo /data/scripts/shutdown-vm.sh --destroy-labs --deallocate
+
+# Preserve running labs and stop VM (saves ~30% costs)
+sudo /data/scripts/shutdown-vm.sh --preserve-labs --stop
+
+# Schedule shutdown at 2 AM
+sudo /data/scripts/shutdown-vm.sh --graceful --schedule 02:00
+```
+
+**Shutdown Options**:
+- `--graceful`: Gracefully stop all labs and containers (default)
+- `--preserve-labs`: Stop VM but keep labs running (resume on restart)
+- `--destroy-labs`: Destroy all labs before shutdown
+- `--quick`: Quick shutdown without stopping containers
+- `--deallocate`: Deallocate VM (saves costs, loses ephemeral IP)
+- `--stop`: Stop VM (keeps IP, still charges for storage)
+- `--backup`: Create backup before shutdown
+- `--schedule <time>`: Schedule shutdown at specific time (HH:MM format)
 
 ## 🗑️ Cleanup
 
@@ -487,6 +614,18 @@ For issues and questions:
 
 ---
 
-**Version**: 1.0.0  
+**Version**: 2.0.0  
 **Last Updated**: 2025-10-18  
 **Author**: iammrherb@gmail.com
+
+**What's New in v2.0.0**:
+- Official Portnox Docker containers for all services (RADIUS, TACACS+, ZTNA, DHCP, SIEM, Auto-Update, UniFi Agent)
+- Removed all local RADIUS/TACACS/LDAP installations
+- Added SR Labs ELK and Splunk integration labs
+- Added Snort IDS network security lab
+- Added HPE Aruba AOS-CX campus network labs
+- Comprehensive vendor startup configs with default credentials
+- Enhanced Azure networking with IP forwarding and outbound internet routing
+- Flexible VM shutdown script with multiple options (graceful, preserve, destroy, quick, deallocate, stop, backup, schedule)
+- Complete Portnox containers reference documentation
+- Vendor startup configurations guide

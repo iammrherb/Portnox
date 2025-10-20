@@ -112,19 +112,17 @@ systemctl start edgeshark
 
 log_success "EdgeShark installed and running on port 5001"
 
-log_info "Installing RADIUS/802.1X automation tools..."
+log_info "Installing 802.1X client tools and network utilities..."
 
 apt-get install -y \
     wpasupplicant \
-    freeradius-utils \
-    hostapd \
     iproute2 \
     net-tools \
     bridge-utils \
     vlan \
     ebtables
 
-log_success "RADIUS/802.1X tools installed"
+log_success "802.1X client tools and network utilities installed"
 
 log_info "Creating wpa_supplicant configuration templates..."
 
@@ -271,22 +269,44 @@ cat > /usr/local/bin/test-radius <<'EOF'
 #!/bin/bash
 
 
-if [ "$#" -ne 4 ]; then
-    echo "Usage: $0 <username> <password> <radius-server> <secret>"
-    echo "Example: $0 user@example.com password 172.20.20.50 testing123"
+if [ "$#" -ne 1 ]; then
+    echo "Usage: $0 <radius-server>"
+    echo "Example: $0 172.20.20.50"
+    echo ""
+    echo "This script tests network connectivity to a RADIUS server."
+    echo "For full RADIUS authentication testing, use:"
+    echo "  1. Portnox Cloud portal (recommended)"
+    echo "  2. Deploy a test client container with wpa_supplicant"
+    echo "  3. Use test-8021x script for 802.1X authentication"
     exit 1
 fi
 
-USERNAME=$1
-PASSWORD=$2
-SERVER=$3
-SECRET=$4
+SERVER=$1
 
-echo "Testing RADIUS authentication..."
+echo "Testing RADIUS server connectivity..."
 echo "Server: $SERVER"
-echo "Username: $USERNAME"
+echo ""
 
-radtest "$USERNAME" "$PASSWORD" "$SERVER" 0 "$SECRET"
+if command -v nc &> /dev/null; then
+    if timeout 5 nc -zvu "$SERVER" 1812 2>&1 | grep -q "succeeded\|open"; then
+        echo "✓ RADIUS server is reachable on UDP port 1812"
+    else
+        echo "✗ Cannot reach RADIUS server on UDP port 1812"
+        exit 1
+    fi
+    
+    if timeout 5 nc -zvu "$SERVER" 1813 2>&1 | grep -q "succeeded\|open"; then
+        echo "✓ RADIUS accounting server is reachable on UDP port 1813"
+    else
+        echo "⚠ Cannot reach RADIUS accounting server on UDP port 1813"
+    fi
+else
+    echo "⚠ netcat (nc) not available, skipping connectivity test"
+fi
+
+echo ""
+echo "Network connectivity test complete!"
+echo "For full RADIUS authentication testing, use the Portnox Cloud portal."
 
 EOF
 

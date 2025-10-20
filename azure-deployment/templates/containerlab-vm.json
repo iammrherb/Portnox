@@ -184,6 +184,32 @@
             "destinationAddressPrefix": "*",
             "destinationPortRange": "8000-9000"
           }
+        },
+        {
+          "name": "AllowInternetOutbound",
+          "properties": {
+            "priority": 2000,
+            "protocol": "*",
+            "access": "Allow",
+            "direction": "Outbound",
+            "sourceAddressPrefix": "*",
+            "sourcePortRange": "*",
+            "destinationAddressPrefix": "Internet",
+            "destinationPortRange": "*"
+          }
+        },
+        {
+          "name": "AllowVnetOutbound",
+          "properties": {
+            "priority": 2001,
+            "protocol": "*",
+            "access": "Allow",
+            "direction": "Outbound",
+            "sourceAddressPrefix": "VirtualNetwork",
+            "sourcePortRange": "*",
+            "destinationAddressPrefix": "VirtualNetwork",
+            "destinationPortRange": "*"
+          }
         }
       ],
       "metadata": {
@@ -289,7 +315,8 @@
             }
           }
         ],
-        "enableAcceleratedNetworking": true
+        "enableAcceleratedNetworking": true,
+        "enableIPForwarding": true
       }
     },
     {

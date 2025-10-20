@@ -271,8 +271,6 @@ pip3 install \
     jinja2 \
     pyyaml \
     requests \
-    pyrad \
-    tacacs_plus \
     cryptography
 
 log_success "Python packages installed"
@@ -359,21 +357,6 @@ sysctl -p || log_warning "Some sysctl settings may not have applied (non-critica
 log_success "System configured"
 
 
-log_info "Installing FreeRADIUS..."
-
-apt-get install -y freeradius freeradius-utils freeradius-common
-
-systemctl stop freeradius
-systemctl disable freeradius
-
-log_success "FreeRADIUS installed"
-
-
-log_info "Installing TACACS+ server..."
-
-apt-get install -y tacacs+ || log_warning "TACACS+ package not available, will use containerized version"
-
-log_success "TACACS+ setup complete"
 
 
 log_info "Pulling common container images..."
@@ -388,9 +371,15 @@ docker pull ubuntu:22.04
 docker pull nginx:alpine
 docker pull frrouting/frr:latest
 
-docker pull freeradius/freeradius-server:latest || log_warning "Failed to pull FreeRADIUS"
+docker pull portnox/portnox-radius:latest || log_warning "Failed to pull Portnox RADIUS"
+docker pull portnox/portnox-tacacs:latest || log_warning "Failed to pull Portnox TACACS+"
+docker pull portnox/ztna-gateway:latest || log_warning "Failed to pull Portnox ZTNA Gateway"
+docker pull portnox/portnox-dhcp:latest || log_warning "Failed to pull Portnox DHCP Relay"
+docker pull portnox/portnox-siem:latest || log_warning "Failed to pull Portnox SIEM Forwarder"
+docker pull portnox/portnox-autoupdate:latest || log_warning "Failed to pull Portnox Auto-Update"
+docker pull portnox/portnox-unifi-agent:latest || log_warning "Failed to pull Portnox UniFi Agent"
 
-log_success "Container images pulled"
+log_success "Container images pulled (including all official Portnox containers)"
 
 
 log_info "Creating helper scripts..."

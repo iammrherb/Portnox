@@ -6,21 +6,21 @@ mgmt:
 
 topology:
   nodes:
-    # Portnox RADIUS Server
+    # Portnox RADIUS Gateway (Official Container)
     portnox-radius:
       kind: linux
-      image: freeradius/freeradius-server:latest
+      image: portnox/portnox-radius:latest
       mgmt-ipv4: 172.20.20.10
       ports:
         - "1812:1812/udp"  # RADIUS Authentication
         - "1813:1813/udp"  # RADIUS Accounting
-      binds:
-        - /data/configs/radius:/etc/raddb
+        - "3799:3799/udp"  # RADIUS CoA
       env:
-        RADIUS_SECRET: testing123
-        RADIUS_CLIENT: 0.0.0.0/0
-      exec:
-        - radiusd -X
+        RADIUS_GATEWAY_PROFILE: default-profile
+        RADIUS_GATEWAY_ORG_ID: your-org-id-here
+        RADIUS_GATEWAY_TOKEN: your-gateway-token-here
+        PORTNOX_NAME: lab-radius-gateway
+        PORTNOX_LOG_LEVEL: debug
 
     # Cisco Switch (802.1X Authenticator)
     cisco-switch:
@@ -92,18 +92,6 @@ topology:
         - "636:636"   # LDAPS
         - "88:88"     # Kerberos
 
-    # LDAP Server (Alternative Identity Provider)
-    ldap-server:
-      kind: linux
-      image: osixia/openldap:latest
-      mgmt-ipv4: 172.20.20.41
-      env:
-        LDAP_ORGANISATION: "Portnox"
-        LDAP_DOMAIN: "portnox.local"
-        LDAP_ADMIN_PASSWORD: "admin"
-      ports:
-        - "389:389"
-        - "636:636"
 
     # Certificate Authority
     ca-server:
@@ -147,7 +135,6 @@ topology:
 
     # Connect RADIUS to identity providers
     - endpoints: ["portnox-radius:eth4", "windows-ad:eth1"]
-    - endpoints: ["portnox-radius:eth5", "ldap-server:eth1"]
 
     # Connect CA to RADIUS
     - endpoints: ["ca-server:eth1", "portnox-radius:eth6"]
