@@ -92,7 +92,7 @@ topology:
 
     # Fortinet FortiGate (TACACS+ Client)
     fortigate-fw:
-      kind: vr-ftdv
+      kind: cisco_ftdv
       image: vrnetlab/vr-ftdv:7.2.0
       mgmt-ipv4: 172.20.21.25
       startup-config: /data/configs/fortigate-tacacs.cfg
@@ -145,7 +145,8 @@ topology:
         - "514:514/udp"
         - "514:514/tcp"
       exec:
-        - apt-get update && apt-get install -y rsyslog
+        - apt-get update
+        - apt-get install -y rsyslog
         - rsyslogd -n
 
     # Jump Host for Management
@@ -154,7 +155,8 @@ topology:
       image: ubuntu:22.04
       mgmt-ipv4: 172.20.21.50
       exec:
-        - apt-get update && apt-get install -y openssh-client telnet curl wget
+        - apt-get update
+        - apt-get install -y openssh-client telnet curl wget
 
     # Monitoring Server (Prometheus/Grafana)
     monitoring:

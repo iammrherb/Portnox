@@ -234,8 +234,28 @@ jobs:
               echo '/dev/sdc /data ext4 defaults,nofail 0 2' | sudo tee -a /etc/fstab
               
               # Create directory structure
-              sudo mkdir -p /data/{containerlab,labs,images,configs,vrnetlab}
+              sudo mkdir -p /data/{containerlab,labs,images,configs,vrnetlab,srlabs}
               sudo chown -R azureuser:azureuser /data
+            fi
+          EOF
+
+      - name: Create lab configuration files
+        run: |
+          VM_HOST=$(cat deployment-artifacts/vm_hostname.txt)
+          
+          ssh -o StrictHostKeyChecking=no -i deployment-artifacts/azure_key azureuser@$VM_HOST << 'EOF'
+            if [ -f /tmp/create-lab-configs.sh ]; then
+              sudo /tmp/create-lab-configs.sh
+            fi
+          EOF
+
+      - name: Setup GUI and authentication tools
+        run: |
+          VM_HOST=$(cat deployment-artifacts/vm_hostname.txt)
+          
+          ssh -o StrictHostKeyChecking=no -i deployment-artifacts/azure_key azureuser@$VM_HOST << 'EOF'
+            if [ -f /tmp/setup-gui-and-tools.sh ]; then
+              sudo /tmp/setup-gui-and-tools.sh
             fi
           EOF
 
@@ -267,29 +287,26 @@ jobs:
           scp -o StrictHostKeyChecking=no -i deployment-artifacts/azure_key \
             azure-deployment/COMPREHENSIVE_GUIDE.md azureuser@$VM_HOST:/data/
 
-      - name: Deploy labs
+      - name: Deploy labs sequentially
         run: |
           VM_HOST=$(cat deployment-artifacts/vm_hostname.txt)
           
           ssh -o StrictHostKeyChecking=no -i deployment-artifacts/azure_key azureuser@$VM_HOST << 'EOF'
-            cd /data/labs
+            # Use sequential deployment to avoid resource exhaustion
+            # Each lab is deployed, verified, then destroyed
+            if [ -f /tmp/deploy-labs-sequential.sh ]; then
+              sudo /tmp/deploy-labs-sequential.sh
+            fi
             
-            # Deploy each lab
-            for lab in *.clab.yml; do
-              if [ -f "$lab" ]; then
-                echo "Deploying lab: $lab"
-                sudo containerlab deploy -t "$lab" || echo "Failed to deploy $lab"
-              fi
-            done
-            
-            # Deploy SR Labs topologies
+            # Deploy SR Labs topologies (also sequential)
             echo "Deploying SR Labs topologies..."
             if [ -f /tmp/deploy-srlabs-topologies.sh ]; then
               sudo /tmp/deploy-srlabs-topologies.sh
             fi
             
-            # List deployed labs
-            sudo containerlab inspect --all
+            # Show final status
+            echo "All labs have been tested and destroyed to save resources"
+            echo "To deploy a specific lab, use: sudo containerlab deploy -t /data/labs/<lab-name>.clab.yml"
           EOF
 
   import-images:
@@ -380,23 +397,55 @@ jobs:
           ssh -i azure_key azureuser@$VM_HOST
           \`\`\`
           
-          ### Antimony GUI
-          - URL: http://$VM_HOST:8080
+          ### Web Interfaces
+          - **Antimony GUI** (ContainerLab Management): http://$VM_HOST:8080
+          - **EdgeShark** (Network Analysis): http://$VM_HOST:5001
+          - **RDP Access** (Desktop GUI): $VM_HOST:3389
+            - Username: azureuser
+            - Password: Set with \`sudo passwd azureuser\`
           
-          ### ContainerLab API
-          - URL: https://$VM_HOST:8443
+          ## Installed Tools
+          
+          ### Authentication Testing
+          - \`test-8021x\` - Test 802.1X authentication
+          - \`test-radius\` - Test RADIUS authentication
+          - \`install-portnox-agent\` - Install Portnox Agent (headless)
+          
+          ### Configuration Files
+          - \`/data/configs/wpa_supplicant/\` - 802.1X configuration templates
+          - \`/data/configs/ca/\` - CA certificates
+          - \`/data/configs/apps/\` - Application configs
+          - \`/data/labs/\` - Lab topology files
           
           ## Services
           - **RADIUS**: UDP 1812, 1813
           - **TACACS+**: TCP 49
           - **HTTP**: TCP 80
           - **HTTPS**: TCP 443
+          - **RDP**: TCP 3389
+          - **Antimony**: TCP 8080
+          - **EdgeShark**: TCP 5001
+          
+          ## Lab Deployment
+          
+          All labs were deployed sequentially and then destroyed to verify functionality without exhausting resources.
+          
+          To deploy a specific lab:
+          \`\`\`bash
+          sudo containerlab deploy -t /data/labs/<lab-name>.clab.yml
+          \`\`\`
+          
+          To destroy a lab:
+          \`\`\`bash
+          sudo containerlab destroy -t /data/labs/<lab-name>.clab.yml
+          \`\`\`
           
           ## Next Steps
           1. Download the SSH key from the artifacts
-          2. Access the VM using the SSH command above
-          3. Check deployed labs: \`sudo containerlab inspect --all\`
+          2. Access the VM using SSH or RDP
+          3. Deploy a lab: \`sudo containerlab deploy -t /data/labs/quickstart-lab.clab.yml\`
           4. Access Antimony GUI at http://$VM_HOST:8080
+          5. Access EdgeShark at http://$VM_HOST:5001
           
           ## Cleanup
           To delete all resources:
