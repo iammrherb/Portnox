@@ -92,7 +92,7 @@ topology:
 
     # Fortinet FortiGate (TACACS+ Client)
     fortigate-fw:
-      kind: vr-ftdv
+      kind: cisco_ftdv
       image: vrnetlab/vr-ftdv:7.2.0
       mgmt-ipv4: 172.20.21.25
       startup-config: /data/configs/fortigate-tacacs.cfg
@@ -117,15 +117,6 @@ topology:
         - "636:636"
         - "88:88"
 
-    # LDAP Server (Alternative Identity Provider)
-    ldap-server:
-      kind: linux
-      image: osixia/openldap:latest
-      mgmt-ipv4: 172.20.21.31
-      env:
-        LDAP_ORGANISATION: "Corporation"
-        LDAP_DOMAIN: "corp.local"
-        LDAP_ADMIN_PASSWORD: "ldapadmin"
 
     # SAML Identity Provider (Okta/Azure AD simulation)
     saml-idp:
@@ -145,7 +136,8 @@ topology:
         - "514:514/udp"
         - "514:514/tcp"
       exec:
-        - apt-get update && apt-get install -y rsyslog
+        - apt-get update
+        - apt-get install -y rsyslog
         - rsyslogd -n
 
     # Jump Host for Management
@@ -154,7 +146,8 @@ topology:
       image: ubuntu:22.04
       mgmt-ipv4: 172.20.21.50
       exec:
-        - apt-get update && apt-get install -y openssh-client telnet curl wget
+        - apt-get update
+        - apt-get install -y openssh-client telnet curl wget
 
     # Monitoring Server (Prometheus/Grafana)
     monitoring:
@@ -175,8 +168,7 @@ topology:
 
     # Connect TACACS+ to identity providers
     - endpoints: ["portnox-tacacs:eth7", "ad-server:eth1"]
-    - endpoints: ["portnox-tacacs:eth8", "ldap-server:eth1"]
-    - endpoints: ["portnox-tacacs:eth9", "saml-idp:eth1"]
+    - endpoints: ["portnox-tacacs:eth8", "saml-idp:eth1"]
 
     # Management network
     - endpoints: ["jump-host:eth1", "cisco-router:eth2"]

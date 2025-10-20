@@ -35,10 +35,7 @@ topology:
         set / network-instance default protocols bgp admin-state enable
         set / network-instance default protocols bgp router-id 10.5.0.1
         set / network-instance default protocols bgp autonomous-system 65000
-        
-        set / system aaa authentication tacacs admin-state enable
-        set / system aaa authentication tacacs server 172.20.20.100 secret-key tacacskey123
-        set / system aaa authentication tacacs server 172.20.20.100 port 49
+        set / network-instance default protocols bgp group ebgp ipv4-unicast admin-state enable
     
     srl-leaf-1:
       kind: nokia_srlinux
@@ -67,18 +64,9 @@ topology:
         set / network-instance default protocols bgp admin-state enable
         set / network-instance default protocols bgp router-id 10.5.0.2
         set / network-instance default protocols bgp autonomous-system 65001
-        set / network-instance default protocols bgp neighbor 10.5.1.1 peer-as 65000
-        
-        set / system dot1x admin-state enable
-        set / system dot1x interface ethernet-1/2 admin-state enable
-        set / system dot1x interface ethernet-1/2 authenticator admin-state enable
-        
-        set / system aaa authentication radius admin-state enable
-        set / system aaa authentication radius server 172.20.20.101 secret-key testing123
-        set / system aaa authentication radius server 172.20.20.101 port 1812
-        
-        set / system aaa authentication tacacs admin-state enable
-        set / system aaa authentication tacacs server 172.20.20.100 secret-key tacacskey123
+        set / network-instance default protocols bgp group ebgp peer-as 65000
+        set / network-instance default protocols bgp group ebgp ipv4-unicast admin-state enable
+        set / network-instance default protocols bgp neighbor 10.5.1.1 peer-group ebgp
     
     srl-leaf-2:
       kind: nokia_srlinux
@@ -107,14 +95,9 @@ topology:
         set / network-instance default protocols bgp admin-state enable
         set / network-instance default protocols bgp router-id 10.5.0.3
         set / network-instance default protocols bgp autonomous-system 65002
-        set / network-instance default protocols bgp neighbor 10.5.2.1 peer-as 65000
-        
-        set / system dot1x admin-state enable
-        set / system dot1x interface ethernet-1/2 admin-state enable
-        set / system dot1x interface ethernet-1/2 authenticator admin-state enable
-        
-        set / system aaa authentication radius admin-state enable
-        set / system aaa authentication radius server 172.20.20.101 secret-key testing123
+        set / network-instance default protocols bgp group ebgp peer-as 65000
+        set / network-instance default protocols bgp group ebgp ipv4-unicast admin-state enable
+        set / network-instance default protocols bgp neighbor 10.5.2.1 peer-group ebgp
     
     srl-leaf-3:
       kind: nokia_srlinux
@@ -143,7 +126,9 @@ topology:
         set / network-instance default protocols bgp admin-state enable
         set / network-instance default protocols bgp router-id 10.5.0.4
         set / network-instance default protocols bgp autonomous-system 65003
-        set / network-instance default protocols bgp neighbor 10.5.3.1 peer-as 65000
+        set / network-instance default protocols bgp group ebgp peer-as 65000
+        set / network-instance default protocols bgp group ebgp ipv4-unicast admin-state enable
+        set / network-instance default protocols bgp neighbor 10.5.3.1 peer-group ebgp
     
     # RADIUS Server
     radius-server:
@@ -168,21 +153,24 @@ topology:
       image: ubuntu:22.04
       mgmt-ipv4: 172.20.20.208
       exec:
-        - apt-get update && apt-get install -y wpasupplicant iproute2
+        - apt-get update
+        - apt-get install -y wpasupplicant iproute2
     
     client-2:
       kind: linux
       image: ubuntu:22.04
       mgmt-ipv4: 172.20.20.209
       exec:
-        - apt-get update && apt-get install -y wpasupplicant iproute2
+        - apt-get update
+        - apt-get install -y wpasupplicant iproute2
     
     client-3:
       kind: linux
       image: ubuntu:22.04
       mgmt-ipv4: 172.20.20.210
       exec:
-        - apt-get update && apt-get install -y wpasupplicant iproute2
+        - apt-get update
+        - apt-get install -y wpasupplicant iproute2
   
   links:
     - endpoints: ["srl-spine-1:e1-1", "srl-leaf-1:e1-1"]
