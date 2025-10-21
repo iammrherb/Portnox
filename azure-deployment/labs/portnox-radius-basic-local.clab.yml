@@ -1,0 +1,83 @@
+name: portnox-radius-basic-local
+
+# Basic 802.1X RADIUS Lab with Local Portnox RADIUS Container
+# This lab demonstrates basic 802.1X authentication using the Portnox RADIUS container
+# running locally in ContainerLab, with a Cisco switch configured for 802.1X
+
+topology:
+  nodes:
+    # Portnox RADIUS Server (Local Container)
+    portnox-radius:
+      kind: linux
+      image: portnox/portnox-radius:latest
+      env:
+        # Portnox Cloud connection (for policy sync)
+        PORTNOX_CLOUD_URL: ${PORTNOX_CLOUD_URL:-https://yourorg.portnox.cloud}
+        PORTNOX_GATEWAY_TOKEN: ${PORTNOX_GATEWAY_TOKEN:-your-gateway-token}
+        PORTNOX_ORG_ID: ${PORTNOX_ORG_ID:-your-org-id}
+        # RADIUS shared secret
+        RADIUS_SECRET: ${RADIUS_SECRET:-testing123}
+      ports:
+        - "1812:1812/udp"  # RADIUS Authentication
+        - "1813:1813/udp"  # RADIUS Accounting
+      mgmt-ipv4: 172.20.20.10
+    
+    # Cisco Switch with 802.1X
+    cisco-switch:
+      kind: ceos
+      image: ceos:latest
+      mgmt-ipv4: 172.20.20.20
+      startup-config: |
+        hostname cisco-sw1
+        !
+        aaa new-model
+        aaa authentication dot1x default group radius
+        aaa authorization network default group radius
+        !
+        radius server PORTNOX
+         address ipv4 172.20.20.10 auth-port 1812 acct-port 1813
+         key testing123
+        !
+        dot1x system-auth-control
+        !
+        interface Ethernet1
+         description Management
+         no shutdown
+        !
+        interface Ethernet2
+         description 802.1X Client Port
+         switchport mode access
+         switchport access vlan 10
+         authentication port-control auto
+         dot1x pae authenticator
+         spanning-tree portfast
+         no shutdown
+        !
+        vlan 10
+         name Authenticated-VLAN
+        !
+    
+    # Linux Client with wpa_supplicant (EAP-PEAP)
+    client-peap:
+      kind: linux
+      image: wbitt/network-multitool:latest
+      mgmt-ipv4: 172.20.20.30
+      exec:
+        - apt-get update && apt-get install -y wpasupplicant
+      binds:
+        - /data/configs/wpa_supplicant:/configs:ro
+    
+    # Linux Client with wpa_supplicant (EAP-TLS)
+    client-tls:
+      kind: linux
+      image: wbitt/network-multitool:latest
+      mgmt-ipv4: 172.20.20.31
+      exec:
+        - apt-get update && apt-get install -y wpasupplicant
+      binds:
+        - /data/configs/wpa_supplicant:/configs:ro
+        - /data/configs/ca:/certs:ro
+
+  links:
+    - endpoints: ["cisco-switch:eth2", "client-peap:eth1"]
+    - endpoints: ["cisco-switch:eth3", "client-tls:eth1"]

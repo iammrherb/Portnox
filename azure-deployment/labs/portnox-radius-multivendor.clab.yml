@@ -1,0 +1,172 @@
+name: portnox-radius-multivendor
+
+# Multi-Vendor 802.1X RADIUS Lab with Portnox
+# Demonstrates 802.1X authentication across multiple vendor platforms
+# Includes Cisco, Arista, Juniper, HPE Aruba, Palo Alto, and Fortinet
+
+topology:
+  nodes:
+    # Portnox RADIUS Server
+    portnox-radius:
+      kind: linux
+      image: portnox/portnox-radius:latest
+      env:
+        PORTNOX_CLOUD_URL: ${PORTNOX_CLOUD_URL:-https://yourorg.portnox.cloud}
+        PORTNOX_GATEWAY_TOKEN: ${PORTNOX_GATEWAY_TOKEN:-your-gateway-token}
+        PORTNOX_ORG_ID: ${PORTNOX_ORG_ID:-your-org-id}
+        RADIUS_SECRET: ${RADIUS_SECRET:-testing123}
+      ports:
+        - "1812:1812/udp"
+        - "1813:1813/udp"
+      mgmt-ipv4: 172.20.20.10
+    
+    # Cisco Catalyst Switch
+    cisco-catalyst:
+      kind: ceos
+      image: ceos:latest
+      mgmt-ipv4: 172.20.20.20
+      startup-config: |
+        hostname cisco-catalyst
+        !
+        aaa new-model
+        aaa authentication dot1x default group radius
+        aaa authorization network default group radius
+        !
+        radius server PORTNOX
+         address ipv4 172.20.20.10 auth-port 1812 acct-port 1813
+         key testing123
+        !
+        dot1x system-auth-control
+        !
+        interface Ethernet2
+         description 802.1X EAP-TLS Client
+         switchport mode access
+         switchport access vlan 10
+         authentication port-control auto
+         dot1x pae authenticator
+         spanning-tree portfast
+         no shutdown
+        !
+        vlan 10
+         name Authenticated-VLAN
+        !
+    
+    # Arista EOS Switch
+    arista-eos:
+      kind: ceos
+      image: ceos:latest
+      mgmt-ipv4: 172.20.20.21
+      startup-config: |
+        hostname arista-eos
+        !
+        aaa authentication dot1x default group radius
+        aaa authorization network default group radius
+        !
+        radius-server host 172.20.20.10 auth-port 1812 acct-port 1813 key testing123
+        !
+        dot1x system-auth-control
+        !
+        interface Ethernet2
+         description 802.1X EAP-PEAP Client
+         switchport mode access
+         switchport access vlan 10
+         dot1x pae authenticator
+         spanning-tree portfast
+         no shutdown
+        !
+        vlan 10
+         name Authenticated-VLAN
+        !
+    
+    # Juniper EX Switch
+    juniper-ex:
+      kind: vr-veos
+      image: vrnetlab/vr-vmx:latest
+      mgmt-ipv4: 172.20.20.22
+      startup-config: |
+        set system host-name juniper-ex
+        set protocols dot1x authenticator authentication-profile-name PORTNOX
+        set protocols dot1x authenticator interface ge-0/0/2 supplicant single
+        set protocols dot1x authenticator interface ge-0/0/2 retries 3
+        set protocols dot1x authenticator interface ge-0/0/2 quiet-period 60
+        set protocols dot1x authenticator interface ge-0/0/2 transmit-period 30
+        set protocols dot1x authenticator interface ge-0/0/2 mac-radius restrict
+        set protocols dot1x authenticator interface ge-0/0/2 server-fail permit
+        set access profile PORTNOX authentication-order radius
+        set access profile PORTNOX radius authentication-server 172.20.20.10 port 1812
+        set access profile PORTNOX radius authentication-server 172.20.20.10 secret testing123
+        set access profile PORTNOX radius accounting-server 172.20.20.10 port 1813
+        set access profile PORTNOX radius accounting-server 172.20.20.10 secret testing123
+        set vlans authenticated vlan-id 10
+    
+    # HPE Aruba CX Switch
+    aruba-cx:
+      kind: linux
+      image: arubanetworks/aoscx:latest
+      mgmt-ipv4: 172.20.20.23
+      startup-config: |
+        hostname aruba-cx
+        !
+        radius-server host 172.20.20.10 key testing123
+        !
+        aaa authentication port-access dot1x authenticator radius
+        !
+        interface 1/1/2
+         description 802.1X EAP-TTLS Client
+         no shutdown
+         no routing
+         vlan access 10
+         aaa authentication port-access dot1x authenticator
+         aaa authentication port-access client-limit 1
+        !
+        vlan 10
+         name Authenticated-VLAN
+        !
+    
+    # Palo Alto Firewall (for 802.1X on user-id)
+    paloalto-fw:
+      kind: panos
+      image: vrnetlab/vr-panos:latest
+      mgmt-ipv4: 172.20.20.24
+    
+    # Fortinet FortiGate (for 802.1X on FortiSwitch)
+    fortinet-fg:
+      kind: fortinet_fortigate
+      image: vrnetlab/vr-fortios:latest
+      mgmt-ipv4: 172.20.20.25
+    
+    # Client: EAP-TLS
+    client-eap-tls:
+      kind: linux
+      image: wbitt/network-multitool:latest
+      mgmt-ipv4: 172.20.20.30
+      exec:
+        - apt-get update && apt-get install -y wpasupplicant
+      binds:
+        - /data/configs/wpa_supplicant:/configs:ro
+        - /data/configs/ca:/certs:ro
+    
+    # Client: EAP-PEAP
+    client-eap-peap:
+      kind: linux
+      image: wbitt/network-multitool:latest
+      mgmt-ipv4: 172.20.20.31
+      exec:
+        - apt-get update && apt-get install -y wpasupplicant
+      binds:
+        - /data/configs/wpa_supplicant:/configs:ro
+    
+    # Client: EAP-TTLS
+    client-eap-ttls:
+      kind: linux
+      image: wbitt/network-multitool:latest
+      mgmt-ipv4: 172.20.20.32
+      exec:
+        - apt-get update && apt-get install -y wpasupplicant
+      binds:
+        - /data/configs/wpa_supplicant:/configs:ro
+
+  links:
+    - endpoints: ["cisco-catalyst:eth2", "client-eap-tls:eth1"]
+    - endpoints: ["arista-eos:eth2", "client-eap-peap:eth1"]
+    - endpoints: ["aruba-cx:eth2", "client-eap-ttls:eth1"]

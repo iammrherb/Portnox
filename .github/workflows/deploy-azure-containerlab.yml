@@ -131,7 +131,7 @@ jobs:
             --parameters \
               vmName="${{ github.event.inputs.vm_name }}" \
               vmSize="${{ github.event.inputs.vm_size }}" \
-              adminUsername="azureuser" \
+              adminUsername="labnox" \
               authenticationType="sshPublicKey" \
               adminPasswordOrKey="${{ steps.ssh.outputs.SSH_PUBLIC_KEY }}" \
               dataDiskSizeGB=${{ github.event.inputs.data_disk_size }} \
@@ -169,7 +169,7 @@ jobs:
         run: |
           echo "Waiting for VM to be accessible..."
           for i in {1..30}; do
-            if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -i deployment-artifacts/azure_key azureuser@${{ steps.deploy.outputs.hostname }} "echo 'VM is ready'"; then
+            if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -i deployment-artifacts/azure_key labnox@${{ steps.deploy.outputs.hostname }} "echo 'VM is ready'"; then
               echo "VM is accessible"
               break
             fi
@@ -199,7 +199,7 @@ jobs:
           VM_HOST=$(cat deployment-artifacts/vm_hostname.txt)
           echo "Waiting for cloud-init to complete on $VM_HOST..."
           
-          ssh -o StrictHostKeyChecking=no -i deployment-artifacts/azure_key azureuser@$VM_HOST << 'EOF'
+          ssh -o StrictHostKeyChecking=no -i deployment-artifacts/azure_key labnox@$VM_HOST << 'EOF'
             echo "Checking cloud-init status..."
             cloud-init status --wait || true
             echo "Cloud-init completed"
@@ -210,13 +210,13 @@ jobs:
           VM_HOST=$(cat deployment-artifacts/vm_hostname.txt)
           
           scp -o StrictHostKeyChecking=no -i deployment-artifacts/azure_key \
-            -r azure-deployment/scripts/* azureuser@$VM_HOST:/tmp/
+            -r azure-deployment/scripts/* labnox@$VM_HOST:/tmp/
 
       - name: Run setup script
         run: |
           VM_HOST=$(cat deployment-artifacts/vm_hostname.txt)
           
-          ssh -o StrictHostKeyChecking=no -i deployment-artifacts/azure_key azureuser@$VM_HOST << 'EOF'
+          ssh -o StrictHostKeyChecking=no -i deployment-artifacts/azure_key labnox@$VM_HOST << 'EOF'
             chmod +x /tmp/*.sh
             sudo /tmp/setup-containerlab.sh
           EOF
@@ -225,7 +225,7 @@ jobs:
         run: |
           VM_HOST=$(cat deployment-artifacts/vm_hostname.txt)
           
-          ssh -o StrictHostKeyChecking=no -i deployment-artifacts/azure_key azureuser@$VM_HOST << 'EOF'
+          ssh -o StrictHostKeyChecking=no -i deployment-artifacts/azure_key labnox@$VM_HOST << 'EOF'
             # Format and mount data disk
             if [ -b /dev/sdc ]; then
               sudo mkfs.ext4 /dev/sdc
@@ -235,7 +235,7 @@ jobs:
               
               # Create directory structure
               sudo mkdir -p /data/{containerlab,labs,images,configs,vrnetlab,srlabs}
-              sudo chown -R azureuser:azureuser /data
+              sudo chown -R labnox:labnox /data
             fi
           EOF
 
@@ -243,7 +243,7 @@ jobs:
         run: |
           VM_HOST=$(cat deployment-artifacts/vm_hostname.txt)
           
-          ssh -o StrictHostKeyChecking=no -i deployment-artifacts/azure_key azureuser@$VM_HOST << 'EOF'
+          ssh -o StrictHostKeyChecking=no -i deployment-artifacts/azure_key labnox@$VM_HOST << 'EOF'
             if [ -f /tmp/create-lab-configs.sh ]; then
               sudo /tmp/create-lab-configs.sh
             fi
@@ -253,7 +253,7 @@ jobs:
         run: |
           VM_HOST=$(cat deployment-artifacts/vm_hostname.txt)
           
-          ssh -o StrictHostKeyChecking=no -i deployment-artifacts/azure_key azureuser@$VM_HOST << 'EOF'
+          ssh -o StrictHostKeyChecking=no -i deployment-artifacts/azure_key labnox@$VM_HOST << 'EOF'
             if [ -f /tmp/setup-gui-and-tools.sh ]; then
               sudo /tmp/setup-gui-and-tools.sh
             fi
@@ -282,16 +282,16 @@ jobs:
           VM_HOST=$(cat deployment-artifacts/vm_hostname.txt)
           
           scp -o StrictHostKeyChecking=no -i deployment-artifacts/azure_key \
-            -r azure-deployment/labs/* azureuser@$VM_HOST:/data/labs/
+            -r azure-deployment/labs/* labnox@$VM_HOST:/data/labs/
           
           scp -o StrictHostKeyChecking=no -i deployment-artifacts/azure_key \
-            azure-deployment/COMPREHENSIVE_GUIDE.md azureuser@$VM_HOST:/data/
+            azure-deployment/COMPREHENSIVE_GUIDE.md labnox@$VM_HOST:/data/
 
       - name: Deploy labs sequentially
         run: |
           VM_HOST=$(cat deployment-artifacts/vm_hostname.txt)
           
-          ssh -o StrictHostKeyChecking=no -i deployment-artifacts/azure_key azureuser@$VM_HOST << 'EOF'
+          ssh -o StrictHostKeyChecking=no -i deployment-artifacts/azure_key labnox@$VM_HOST << 'EOF'
             # Use sequential deployment to avoid resource exhaustion
             # Each lab is deployed, verified, then destroyed
             if [ -f /tmp/deploy-labs-sequential.sh ]; then
@@ -331,7 +331,7 @@ jobs:
         run: |
           VM_HOST=$(cat deployment-artifacts/vm_hostname.txt)
           
-          ssh -o StrictHostKeyChecking=no -i deployment-artifacts/azure_key azureuser@$VM_HOST << 'EOF'
+          ssh -o StrictHostKeyChecking=no -i deployment-artifacts/azure_key labnox@$VM_HOST << 'EOF'
             if [ -f /tmp/import-images-comprehensive.sh ]; then
               sudo /tmp/import-images-comprehensive.sh
             else
@@ -360,7 +360,7 @@ jobs:
         run: |
           VM_HOST=$(cat deployment-artifacts/vm_hostname.txt)
           
-          ssh -o StrictHostKeyChecking=no -i deployment-artifacts/azure_key azureuser@$VM_HOST << 'EOF'
+          ssh -o StrictHostKeyChecking=no -i deployment-artifacts/azure_key labnox@$VM_HOST << 'EOF'
             sudo /tmp/setup-antimony.sh
           EOF
 
@@ -394,15 +394,15 @@ jobs:
           
           ### SSH Access
           \`\`\`bash
-          ssh -i azure_key azureuser@$VM_HOST
+          ssh -i azure_key labnox@$VM_HOST
           \`\`\`
           
           ### Web Interfaces
           - **Antimony GUI** (ContainerLab Management): http://$VM_HOST:8080
           - **EdgeShark** (Network Analysis): http://$VM_HOST:5001
           - **RDP Access** (Desktop GUI): $VM_HOST:3389
-            - Username: azureuser
-            - Password: Set with \`sudo passwd azureuser\`
+            - Username: labnox
+            - Password: Set with \`sudo passwd labnox\`
           
           ## Installed Tools
           

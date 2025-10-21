@@ -1,0 +1,112 @@
+name: portnox-tacacs-basic
+
+# Basic TACACS+ Lab with Portnox TACACS+ Container
+# Demonstrates device administration authentication and command authorization
+# Includes multiple vendor network devices
+
+topology:
+  nodes:
+    # Portnox TACACS+ Server
+    portnox-tacacs:
+      kind: linux
+      image: portnox/portnox-tacacs:latest
+      env:
+        PORTNOX_CLOUD_URL: ${PORTNOX_CLOUD_URL:-https://yourorg.portnox.cloud}
+        PORTNOX_GATEWAY_TOKEN: ${PORTNOX_GATEWAY_TOKEN:-your-tacacs-gateway-token}
+        PORTNOX_ORG_ID: ${PORTNOX_ORG_ID:-your-org-id}
+        TACACS_SECRET: ${TACACS_SECRET:-testing123}
+      ports:
+        - "49:49/tcp"  # TACACS+
+      mgmt-ipv4: 172.20.20.10
+    
+    # Cisco Router with TACACS+
+    cisco-router:
+      kind: ceos
+      image: ceos:latest
+      mgmt-ipv4: 172.20.20.20
+      startup-config: |
+        hostname cisco-rtr1
+        !
+        aaa new-model
+        aaa authentication login default group tacacs+ local
+        aaa authentication enable default group tacacs+ enable
+        aaa authorization exec default group tacacs+ local
+        aaa authorization commands 1 default group tacacs+ local
+        aaa authorization commands 15 default group tacacs+ local
+        aaa accounting exec default start-stop group tacacs+
+        aaa accounting commands 1 default start-stop group tacacs+
+        aaa accounting commands 15 default start-stop group tacacs+
+        !
+        tacacs server PORTNOX
+         address ipv4 172.20.20.10
+         port 49
+         key testing123
+        !
+        line vty 0 4
+         login authentication default
+         authorization exec default
+         authorization commands 1 default
+         authorization commands 15 default
+         accounting exec default
+         accounting commands 1 default
+         accounting commands 15 default
+        !
+    
+    # Arista Switch with TACACS+
+    arista-switch:
+      kind: ceos
+      image: ceos:latest
+      mgmt-ipv4: 172.20.20.21
+      startup-config: |
+        hostname arista-sw1
+        !
+        aaa authentication login default group tacacs+ local
+        aaa authorization exec default group tacacs+ local
+        aaa authorization commands all default group tacacs+ local
+        aaa accounting exec default start-stop group tacacs+
+        aaa accounting commands all default start-stop group tacacs+
+        !
+        tacacs-server host 172.20.20.10 key testing123
+        !
+    
+    # Juniper Router with TACACS+
+    juniper-router:
+      kind: vr-veos
+      image: vrnetlab/vr-vmx:latest
+      mgmt-ipv4: 172.20.20.22
+      startup-config: |
+        set system host-name juniper-rtr1
+        set system tacplus-server 172.20.20.10 port 49
+        set system tacplus-server 172.20.20.10 secret testing123
+        set system authentication-order tacplus
+        set system accounting events login
+        set system accounting events change-log
+        set system accounting events interactive-commands
+        set system accounting destination tacplus server 172.20.20.10
+    
+    # Palo Alto Firewall with TACACS+
+    paloalto-fw:
+      kind: panos
+      image: vrnetlab/vr-panos:latest
+      mgmt-ipv4: 172.20.20.23
+    
+    # Fortinet FortiGate with TACACS+
+    fortinet-fg:
+      kind: fortinet_fortigate
+      image: vrnetlab/vr-fortios:latest
+      mgmt-ipv4: 172.20.20.24
+    
+    # Admin Workstation
+    admin-workstation:
+      kind: linux
+      image: wbitt/network-multitool:latest
+      mgmt-ipv4: 172.20.20.30
+      exec:
+        - apt-get update && apt-get install -y telnet ssh
+
+  links:
+    - endpoints: ["portnox-tacacs:eth1", "cisco-router:eth1"]
+    - endpoints: ["portnox-tacacs:eth2", "arista-switch:eth1"]
+    - endpoints: ["portnox-tacacs:eth3", "juniper-router:eth1"]
+    - endpoints: ["portnox-tacacs:eth4", "paloalto-fw:eth1"]
+    - endpoints: ["portnox-tacacs:eth5", "fortinet-fg:eth1"]

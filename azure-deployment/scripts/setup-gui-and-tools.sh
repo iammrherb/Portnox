@@ -79,38 +79,14 @@ systemctl start antimony
 
 log_success "Antimony GUI installed and running on port 8080"
 
-log_info "Installing EdgeShark..."
+log_info "Installing network utilities..."
 
-# Install dependencies
-apt-get install -y \
-    wireshark \
-    tshark \
+# Install network analysis tools (excluding Wireshark to avoid interactive prompts)
+DEBIAN_FRONTEND=noninteractive apt-get install -y \
     tcpdump \
     python3-pip
 
-pip3 install edgeshark
-
-cat > /etc/systemd/system/edgeshark.service <<'EOF'
-[Unit]
-Description=EdgeShark Container Network Analysis
-After=network.target docker.service
-
-[Service]
-Type=simple
-User=root
-ExecStart=/usr/local/bin/edgeshark serve --port 5001
-Restart=always
-RestartSec=10
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-systemctl daemon-reload
-systemctl enable edgeshark
-systemctl start edgeshark
-
-log_success "EdgeShark installed and running on port 5001"
+log_success "Network utilities installed"
 
 log_info "Installing 802.1X client tools and network utilities..."
 
@@ -327,10 +303,9 @@ log_success "Installation complete!"
 echo ""
 log_info "Access Information:"
 echo "  Antimony GUI:    http://${HOSTNAME}:8080 or http://${IP}:8080"
-echo "  EdgeShark:       http://${HOSTNAME}:5001 or http://${IP}:5001"
 echo "  RDP Access:      ${HOSTNAME}:3389 or ${IP}:3389"
-echo "    Username:      azureuser"
-echo "    Password:      (your SSH key password or set with: sudo passwd azureuser)"
+echo "    Username:      labnox"
+echo "    Password:      (your SSH key password or set with: sudo passwd labnox)"
 echo ""
 log_info "Installed Tools:"
 echo "  test-8021x       - Test 802.1X authentication"

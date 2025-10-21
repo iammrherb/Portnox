@@ -1,0 +1,115 @@
+name: portnox-ztna-basic
+
+# Basic ZTNA Lab with Portnox ZTNA Gateway
+# Demonstrates Zero Trust Network Access with multiple protected applications
+# Includes Auto-Update container for automatic policy synchronization
+
+topology:
+  nodes:
+    # Portnox ZTNA Gateway
+    ztna-gateway:
+      kind: linux
+      image: portnox/portnox-ztna-gateway:latest
+      env:
+        PORTNOX_CLOUD_URL: ${PORTNOX_CLOUD_URL:-https://yourorg.portnox.cloud}
+        PORTNOX_GATEWAY_TOKEN: ${PORTNOX_GATEWAY_TOKEN:-your-ztna-gateway-token}
+        PORTNOX_ORG_ID: ${PORTNOX_ORG_ID:-your-org-id}
+      ports:
+        - "443:443/tcp"   # HTTPS for ZTNA access
+        - "8443:8443/tcp" # Management API
+      mgmt-ipv4: 172.20.20.10
+    
+    # Portnox Auto-Update Container
+    portnox-autoupdate:
+      kind: linux
+      image: portnox/portnox-auto-update:latest
+      env:
+        PORTNOX_CLOUD_URL: ${PORTNOX_CLOUD_URL:-https://yourorg.portnox.cloud}
+        PORTNOX_GATEWAY_TOKEN: ${PORTNOX_GATEWAY_TOKEN:-your-gateway-token}
+        UPDATE_INTERVAL: ${UPDATE_INTERVAL:-300}
+      mgmt-ipv4: 172.20.20.11
+    
+    # Protected Application: Web Server
+    app-web:
+      kind: linux
+      image: nginx:latest
+      mgmt-ipv4: 172.20.20.20
+      ports:
+        - "8080:80/tcp"
+      binds:
+        - /data/apps/web:/usr/share/nginx/html:ro
+    
+    # Protected Application: API Server
+    app-api:
+      kind: linux
+      image: node:18-alpine
+      mgmt-ipv4: 172.20.20.21
+      ports:
+        - "3000:3000/tcp"
+      exec:
+        - npm install express
+        - node -e "const express = require('express'); const app = express(); app.get('/', (req, res) => res.json({status: 'ok', app: 'api'})); app.listen(3000);"
+    
+    # Protected Application: Database
+    app-database:
+      kind: linux
+      image: postgres:15-alpine
+      mgmt-ipv4: 172.20.20.22
+      env:
+        POSTGRES_PASSWORD: ${DB_PASSWORD:-secretpassword}
+        POSTGRES_USER: ${DB_USER:-appuser}
+        POSTGRES_DB: ${DB_NAME:-appdb}
+      ports:
+        - "5432:5432/tcp"
+    
+    # Protected Application: File Server
+    app-fileserver:
+      kind: linux
+      image: alpine:latest
+      mgmt-ipv4: 172.20.20.23
+      ports:
+        - "2049:2049/tcp"  # NFS
+        - "445:445/tcp"    # SMB
+      exec:
+        - apk add --no-cache samba nfs-utils
+        - mkdir -p /data/shares
+    
+    # Protected Application: SSH Server
+    app-ssh:
+      kind: linux
+      image: ubuntu:22.04
+      mgmt-ipv4: 172.20.20.24
+      ports:
+        - "2222:22/tcp"
+      exec:
+        - apt-get update && apt-get install -y openssh-server
+        - mkdir -p /run/sshd
+        - /usr/sbin/sshd -D
+    
+    # Protected Application: RDP Server
+    app-rdp:
+      kind: linux
+      image: ubuntu:22.04
+      mgmt-ipv4: 172.20.20.25
+      ports:
+        - "3389:3389/tcp"
+      exec:
+        - apt-get update && apt-get install -y xrdp xfce4
+        - systemctl enable xrdp
+        - systemctl start xrdp
+    
+    # Test Client (simulates user accessing ZTNA)
+    test-client:
+      kind: linux
+      image: wbitt/network-multitool:latest
+      mgmt-ipv4: 172.20.20.30
+      exec:
+        - apt-get update && apt-get install -y curl wget
+
+  links:
+    - endpoints: ["ztna-gateway:eth1", "app-web:eth1"]
+    - endpoints: ["ztna-gateway:eth2", "app-api:eth1"]
+    - endpoints: ["ztna-gateway:eth3", "app-database:eth1"]
+    - endpoints: ["ztna-gateway:eth4", "app-fileserver:eth1"]
+    - endpoints: ["ztna-gateway:eth5", "app-ssh:eth1"]
+    - endpoints: ["ztna-gateway:eth6", "app-rdp:eth1"]
