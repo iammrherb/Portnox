@@ -10,7 +10,7 @@ topology:
     portnox-radius:
       kind: linux
       image: portnox/portnox-radius:latest
-      mgmt-ipv4: 172.20.20.10
+      mgmt-ipv4-address: 172.20.20.10/24
       ports:
         - "1812:1812/udp"  # RADIUS Authentication
         - "1813:1813/udp"  # RADIUS Accounting
@@ -26,7 +26,7 @@ topology:
     cisco-switch:
       kind: vr-csr
       image: vrnetlab/vr-csr:17.03.06
-      mgmt-ipv4: 172.20.20.20
+      mgmt-ipv4-address: 172.20.20.20/24
       startup-config: /data/configs/cisco-switch-8021x.cfg
       env:
         CONNECTION_MODE: tc
@@ -35,21 +35,21 @@ topology:
     arista-switch:
       kind: ceos
       image: ceos:4.30.0F
-      mgmt-ipv4: 172.20.20.21
+      mgmt-ipv4-address: 172.20.20.21/24
       startup-config: /data/configs/arista-switch-8021x.cfg
 
     # Juniper Switch (802.1X Authenticator)
     juniper-switch:
       kind: vr-vjunosswitch
       image: vrnetlab/vr-vjunosswitch:23.2R1
-      mgmt-ipv4: 172.20.20.22
+      mgmt-ipv4-address: 172.20.20.22/24
       startup-config: /data/configs/juniper-switch-8021x.cfg
 
     # Test Client 1 (Wired - EAP-TLS)
     client-wired-tls:
       kind: linux
       image: ubuntu:22.04
-      mgmt-ipv4: 172.20.20.30
+      mgmt-ipv4-address: 172.20.20.30/24
       binds:
         - /data/configs/supplicant:/etc/wpa_supplicant
       exec:
@@ -60,7 +60,7 @@ topology:
     client-wired-peap:
       kind: linux
       image: ubuntu:22.04
-      mgmt-ipv4: 172.20.20.31
+      mgmt-ipv4-address: 172.20.20.31/24
       binds:
         - /data/configs/supplicant:/etc/wpa_supplicant
       exec:
@@ -71,7 +71,7 @@ topology:
     client-wireless-ttls:
       kind: linux
       image: ubuntu:22.04
-      mgmt-ipv4: 172.20.20.32
+      mgmt-ipv4-address: 172.20.20.32/24
       binds:
         - /data/configs/supplicant:/etc/wpa_supplicant
       exec:
@@ -82,7 +82,7 @@ topology:
     windows-ad:
       kind: linux
       image: ubuntu/samba-ad-dc:latest
-      mgmt-ipv4: 172.20.20.40
+      mgmt-ipv4-address: 172.20.20.40/24
       env:
         DOMAIN: PORTNOX.LOCAL
         ADMINPASS: P@ssw0rd123!
@@ -97,7 +97,7 @@ topology:
     ca-server:
       kind: linux
       image: alpine:latest
-      mgmt-ipv4: 172.20.20.50
+      mgmt-ipv4-address: 172.20.20.50/24
       binds:
         - /data/configs/ca:/ca
       exec:
@@ -108,7 +108,7 @@ topology:
     syslog-server:
       kind: linux
       image: ubuntu:22.04
-      mgmt-ipv4: 172.20.20.60
+      mgmt-ipv4-address: 172.20.20.60/24
       ports:
         - "514:514/udp"  # Syslog
         - "514:514/tcp"  # Syslog TCP
@@ -120,7 +120,7 @@ topology:
     traffic-gen:
       kind: linux
       image: networkstatic/iperf3:latest
-      mgmt-ipv4: 172.20.20.70
+      mgmt-ipv4-address: 172.20.20.70/24
 
   links:
     # Connect switches to RADIUS server

@@ -17,13 +17,13 @@ topology:
         TACACS_SECRET: ${TACACS_SECRET:-testing123}
       ports:
         - "49:49/tcp"  # TACACS+
-      mgmt-ipv4: 172.20.20.10
+      mgmt-ipv4-address: 172.20.20.10/24
     
     # Cisco Router with TACACS+
     cisco-router:
       kind: ceos
       image: ceos:latest
-      mgmt-ipv4: 172.20.20.20
+      mgmt-ipv4-address: 172.20.20.20/24
       startup-config: |
         hostname cisco-rtr1
         !
@@ -56,7 +56,7 @@ topology:
     arista-switch:
       kind: ceos
       image: ceos:latest
-      mgmt-ipv4: 172.20.20.21
+      mgmt-ipv4-address: 172.20.20.21/24
       startup-config: |
         hostname arista-sw1
         !
@@ -73,7 +73,7 @@ topology:
     juniper-router:
       kind: vr-veos
       image: vrnetlab/vr-vmx:latest
-      mgmt-ipv4: 172.20.20.22
+      mgmt-ipv4-address: 172.20.20.22/24
       startup-config: |
         set system host-name juniper-rtr1
         set system tacplus-server 172.20.20.10 port 49
@@ -88,19 +88,19 @@ topology:
     paloalto-fw:
       kind: panos
       image: vrnetlab/vr-panos:latest
-      mgmt-ipv4: 172.20.20.23
+      mgmt-ipv4-address: 172.20.20.23/24
     
     # Fortinet FortiGate with TACACS+
     fortinet-fg:
       kind: fortinet_fortigate
       image: vrnetlab/vr-fortios:latest
-      mgmt-ipv4: 172.20.20.24
+      mgmt-ipv4-address: 172.20.20.24/24
     
     # Admin Workstation
     admin-workstation:
       kind: linux
       image: wbitt/network-multitool:latest
-      mgmt-ipv4: 172.20.20.30
+      mgmt-ipv4-address: 172.20.20.30/24
       exec:
         - apt-get update && apt-get install -y telnet ssh
 

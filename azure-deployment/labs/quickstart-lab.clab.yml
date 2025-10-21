@@ -9,7 +9,7 @@ topology:
     srl-spine:
       kind: nokia_srlinux
       image: ghcr.io/nokia/srlinux:latest
-      mgmt-ipv4: 172.20.20.10
+      mgmt-ipv4-address: 172.20.20.10/24
       startup-config: |
         set / system information location "Quickstart Lab - Spine"
         set / system aaa authentication admin-user password admin
@@ -34,7 +34,7 @@ topology:
     srl-leaf1:
       kind: nokia_srlinux
       image: ghcr.io/nokia/srlinux:latest
-      mgmt-ipv4: 172.20.20.11
+      mgmt-ipv4-address: 172.20.20.11/24
       startup-config: |
         set / system information location "Quickstart Lab - Leaf 1"
         set / system aaa authentication admin-user password admin
@@ -61,7 +61,7 @@ topology:
     srl-leaf2:
       kind: nokia_srlinux
       image: ghcr.io/nokia/srlinux:latest
-      mgmt-ipv4: 172.20.20.12
+      mgmt-ipv4-address: 172.20.20.12/24
       startup-config: |
         set / system information location "Quickstart Lab - Leaf 2"
         set / system aaa authentication admin-user password admin
@@ -89,7 +89,7 @@ topology:
     frr-router1:
       kind: linux
       image: frrouting/frr:latest
-      mgmt-ipv4: 172.20.20.20
+      mgmt-ipv4-address: 172.20.20.20/24
       exec:
         - |
           cat > /etc/frr/daemons <<EOF
@@ -123,7 +123,7 @@ topology:
     frr-router2:
       kind: linux
       image: frrouting/frr:latest
-      mgmt-ipv4: 172.20.20.21
+      mgmt-ipv4-address: 172.20.20.21/24
       exec:
         - |
           cat > /etc/frr/daemons <<EOF
@@ -158,7 +158,7 @@ topology:
     client1:
       kind: linux
       image: nicolaka/netshoot:latest
-      mgmt-ipv4: 172.20.20.30
+      mgmt-ipv4-address: 172.20.20.30/24
       exec:
         - ip addr add 10.0.10.10/24 dev eth1
         - ip route add default via 10.0.10.1
@@ -166,7 +166,7 @@ topology:
     client2:
       kind: linux
       image: nicolaka/netshoot:latest
-      mgmt-ipv4: 172.20.20.31
+      mgmt-ipv4-address: 172.20.20.31/24
       exec:
         - ip addr add 10.0.20.10/24 dev eth1
         - ip route add default via 10.0.20.1

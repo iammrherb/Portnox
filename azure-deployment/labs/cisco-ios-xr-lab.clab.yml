@@ -9,7 +9,7 @@ topology:
     xr-core-1:
       kind: cisco_xrv9k
       image: vrnetlab/vr-xrv9k:latest
-      mgmt-ipv4: 172.20.20.10
+      mgmt-ipv4-address: 172.20.20.10/24
       cpu: 2
       memory: 4GB
       startup-config: |
@@ -53,7 +53,7 @@ topology:
     xr-edge-1:
       kind: cisco_xrv9k
       image: vrnetlab/vr-xrv9k:latest
-      mgmt-ipv4: 172.20.20.11
+      mgmt-ipv4-address: 172.20.20.11/24
       cpu: 2
       memory: 4GB
       startup-config: |
@@ -91,7 +91,7 @@ topology:
     xr-edge-2:
       kind: cisco_xrv9k
       image: vrnetlab/vr-xrv9k:latest
-      mgmt-ipv4: 172.20.20.12
+      mgmt-ipv4-address: 172.20.20.12/24
       cpu: 2
       memory: 4GB
       startup-config: |
@@ -130,7 +130,7 @@ topology:
     tacacs-server:
       kind: linux
       image: portnox/portnox-tacacs:latest
-      mgmt-ipv4: 172.20.20.100
+      mgmt-ipv4-address: 172.20.20.100/24
       ports:
         - 49:49/tcp
     
@@ -138,7 +138,7 @@ topology:
     test-client:
       kind: linux
       image: nicolaka/netshoot:latest
-      mgmt-ipv4: 172.20.20.200
+      mgmt-ipv4-address: 172.20.20.200/24
   
   links:
     - endpoints: ["xr-core-1:eth1", "xr-edge-1:eth1"]

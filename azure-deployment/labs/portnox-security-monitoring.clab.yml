@@ -17,7 +17,7 @@ topology:
       ports:
         - "1812:1812/udp"
         - "1813:1813/udp"
-      mgmt-ipv4: 172.20.20.10
+      mgmt-ipv4-address: 172.20.20.10/24
     
     # Portnox SIEM Forwarder
     portnox-siem:
@@ -29,13 +29,13 @@ topology:
         SIEM_TYPE: syslog
         SYSLOG_SERVER: 172.20.20.20
         SYSLOG_PORT: 514
-      mgmt-ipv4: 172.20.20.11
+      mgmt-ipv4-address: 172.20.20.11/24
     
     # Kali Linux (Penetration Testing)
     kali-linux:
       kind: linux
       image: kalilinux/kali-rolling:latest
-      mgmt-ipv4: 172.20.20.20
+      mgmt-ipv4-address: 172.20.20.20/24
       ports:
         - "5900:5900/tcp"  # VNC
       exec:
@@ -46,7 +46,7 @@ topology:
     parrot-security:
       kind: linux
       image: parrotsec/security:latest
-      mgmt-ipv4: 172.20.20.21
+      mgmt-ipv4-address: 172.20.20.21/24
       ports:
         - "5901:5900/tcp"  # VNC
     
@@ -54,7 +54,7 @@ topology:
     security-onion:
       kind: linux
       image: securityonionsolutions/securityonion:latest
-      mgmt-ipv4: 172.20.20.22
+      mgmt-ipv4-address: 172.20.20.22/24
       ports:
         - "443:443/tcp"    # Web UI
         - "9200:9200/tcp"  # Elasticsearch
@@ -65,7 +65,7 @@ topology:
     wazuh-manager:
       kind: linux
       image: wazuh/wazuh-manager:latest
-      mgmt-ipv4: 172.20.20.30
+      mgmt-ipv4-address: 172.20.20.30/24
       ports:
         - "1514:1514/tcp"  # Agent communication
         - "1515:1515/tcp"  # Agent enrollment
@@ -81,7 +81,7 @@ topology:
     wazuh-indexer:
       kind: linux
       image: wazuh/wazuh-indexer:latest
-      mgmt-ipv4: 172.20.20.31
+      mgmt-ipv4-address: 172.20.20.31/24
       ports:
         - "9200:9200/tcp"
       env:
@@ -92,7 +92,7 @@ topology:
     wazuh-dashboard:
       kind: linux
       image: wazuh/wazuh-dashboard:latest
-      mgmt-ipv4: 172.20.20.32
+      mgmt-ipv4-address: 172.20.20.32/24
       ports:
         - "5601:5601/tcp"
       env:
@@ -105,7 +105,7 @@ topology:
     alienvault-ossim:
       kind: linux
       image: alienvault/ossim:latest
-      mgmt-ipv4: 172.20.20.40
+      mgmt-ipv4-address: 172.20.20.40/24
       ports:
         - "443:443/tcp"    # Web UI
         - "514:514/udp"    # Syslog
@@ -116,7 +116,7 @@ topology:
     snort-ids:
       kind: linux
       image: ciscotalos/snort3:latest
-      mgmt-ipv4: 172.20.20.50
+      mgmt-ipv4-address: 172.20.20.50/24
       exec:
         - snort -c /etc/snort/snort.lua -i eth1 -A alert_fast -s 65535 -k none
     
@@ -124,7 +124,7 @@ topology:
     suricata-ids:
       kind: linux
       image: jasonish/suricata:latest
-      mgmt-ipv4: 172.20.20.51
+      mgmt-ipv4-address: 172.20.20.51/24
       exec:
         - suricata -c /etc/suricata/suricata.yaml -i eth1
     
@@ -132,7 +132,7 @@ topology:
     test-switch:
       kind: ceos
       image: ceos:latest
-      mgmt-ipv4: 172.20.20.60
+      mgmt-ipv4-address: 172.20.20.60/24
       startup-config: |
         hostname test-sw1
         !
@@ -160,7 +160,7 @@ topology:
     test-client:
       kind: linux
       image: wbitt/network-multitool:latest
-      mgmt-ipv4: 172.20.20.70
+      mgmt-ipv4-address: 172.20.20.70/24
       exec:
         - apt-get update && apt-get install -y wpasupplicant
 

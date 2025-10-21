@@ -6,7 +6,7 @@ topology:
     pan-fw-1:
       kind: paloalto_panos
       image: vrnetlab/vr-pan:latest
-      mgmt-ipv4: 172.20.20.40
+      mgmt-ipv4-address: 172.20.20.40/24
       cpu: 4
       memory: 8GB
       startup-config: |
@@ -59,7 +59,7 @@ topology:
     internal-router:
       kind: linux
       image: frrouting/frr:latest
-      mgmt-ipv4: 172.20.20.41
+      mgmt-ipv4-address: 172.20.20.41/24
       exec:
         - ip addr add 10.3.1.2/24 dev eth1
         - ip link set eth1 up
@@ -68,7 +68,7 @@ topology:
     external-router:
       kind: linux
       image: frrouting/frr:latest
-      mgmt-ipv4: 172.20.20.42
+      mgmt-ipv4-address: 172.20.20.42/24
       exec:
         - ip addr add 10.3.2.2/24 dev eth1
         - ip link set eth1 up
@@ -77,7 +77,7 @@ topology:
     dmz-server:
       kind: linux
       image: nginx:alpine
-      mgmt-ipv4: 172.20.20.43
+      mgmt-ipv4-address: 172.20.20.43/24
       exec:
         - ip addr add 10.3.3.2/24 dev eth1
         - ip link set eth1 up
@@ -86,7 +86,7 @@ topology:
     radius-server:
       kind: linux
       image: portnox/portnox-radius:latest
-      mgmt-ipv4: 172.20.20.101
+      mgmt-ipv4-address: 172.20.20.101/24
       ports:
         - 1812:1812/udp
         - 1813:1813/udp
@@ -95,7 +95,7 @@ topology:
     tacacs-server:
       kind: linux
       image: portnox/portnox-tacacs:latest
-      mgmt-ipv4: 172.20.20.100
+      mgmt-ipv4-address: 172.20.20.100/24
       ports:
         - 49:49/tcp
     
@@ -103,7 +103,7 @@ topology:
     internal-client:
       kind: linux
       image: nicolaka/netshoot:latest
-      mgmt-ipv4: 172.20.20.204
+      mgmt-ipv4-address: 172.20.20.204/24
       exec:
         - ip addr add 10.3.1.10/24 dev eth1
         - ip route add default via 10.3.1.1
@@ -112,7 +112,7 @@ topology:
     external-client:
       kind: linux
       image: nicolaka/netshoot:latest
-      mgmt-ipv4: 172.20.20.205
+      mgmt-ipv4-address: 172.20.20.205/24
       exec:
         - ip addr add 10.3.2.10/24 dev eth1
         - ip link set eth1 up

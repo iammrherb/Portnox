@@ -9,7 +9,7 @@ topology:
     srl-spine-1:
       kind: nokia_srlinux
       image: ghcr.io/nokia/srlinux:latest
-      mgmt-ipv4: 172.20.20.60
+      mgmt-ipv4-address: 172.20.20.60/24
       startup-config: |
         set / system information location "Data Center - Spine 1"
         set / system information contact "admin@example.com"
@@ -40,7 +40,7 @@ topology:
     srl-leaf-1:
       kind: nokia_srlinux
       image: ghcr.io/nokia/srlinux:latest
-      mgmt-ipv4: 172.20.20.61
+      mgmt-ipv4-address: 172.20.20.61/24
       startup-config: |
         set / system information location "Data Center - Leaf 1"
         set / system information contact "admin@example.com"
@@ -71,7 +71,7 @@ topology:
     srl-leaf-2:
       kind: nokia_srlinux
       image: ghcr.io/nokia/srlinux:latest
-      mgmt-ipv4: 172.20.20.62
+      mgmt-ipv4-address: 172.20.20.62/24
       startup-config: |
         set / system information location "Data Center - Leaf 2"
         set / system information contact "admin@example.com"
@@ -102,7 +102,7 @@ topology:
     srl-leaf-3:
       kind: nokia_srlinux
       image: ghcr.io/nokia/srlinux:latest
-      mgmt-ipv4: 172.20.20.63
+      mgmt-ipv4-address: 172.20.20.63/24
       startup-config: |
         set / system information location "Data Center - Leaf 3"
         set / system information contact "admin@example.com"
@@ -134,7 +134,7 @@ topology:
     radius-server:
       kind: linux
       image: portnox/portnox-radius:latest
-      mgmt-ipv4: 172.20.20.101
+      mgmt-ipv4-address: 172.20.20.101/24
       ports:
         - 1812:1812/udp
         - 1813:1813/udp
@@ -143,7 +143,7 @@ topology:
     tacacs-server:
       kind: linux
       image: portnox/portnox-tacacs:latest
-      mgmt-ipv4: 172.20.20.100
+      mgmt-ipv4-address: 172.20.20.100/24
       ports:
         - 49:49/tcp
     
@@ -151,7 +151,7 @@ topology:
     client-1:
       kind: linux
       image: ubuntu:22.04
-      mgmt-ipv4: 172.20.20.208
+      mgmt-ipv4-address: 172.20.20.208/24
       exec:
         - apt-get update
         - apt-get install -y wpasupplicant iproute2
@@ -159,7 +159,7 @@ topology:
     client-2:
       kind: linux
       image: ubuntu:22.04
-      mgmt-ipv4: 172.20.20.209
+      mgmt-ipv4-address: 172.20.20.209/24
       exec:
         - apt-get update
         - apt-get install -y wpasupplicant iproute2
@@ -167,7 +167,7 @@ topology:
     client-3:
       kind: linux
       image: ubuntu:22.04
-      mgmt-ipv4: 172.20.20.210
+      mgmt-ipv4-address: 172.20.20.210/24
       exec:
         - apt-get update
         - apt-get install -y wpasupplicant iproute2

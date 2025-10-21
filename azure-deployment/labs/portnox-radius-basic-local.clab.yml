@@ -20,13 +20,13 @@ topology:
       ports:
         - "1812:1812/udp"  # RADIUS Authentication
         - "1813:1813/udp"  # RADIUS Accounting
-      mgmt-ipv4: 172.20.20.10
+      mgmt-ipv4-address: 172.20.20.10/24
     
     # Cisco Switch with 802.1X
     cisco-switch:
       kind: ceos
       image: ceos:latest
-      mgmt-ipv4: 172.20.20.20
+      mgmt-ipv4-address: 172.20.20.20/24
       startup-config: |
         hostname cisco-sw1
         !
@@ -61,7 +61,7 @@ topology:
     client-peap:
       kind: linux
       image: wbitt/network-multitool:latest
-      mgmt-ipv4: 172.20.20.30
+      mgmt-ipv4-address: 172.20.20.30/24
       exec:
         - apt-get update && apt-get install -y wpasupplicant
       binds:
@@ -71,7 +71,7 @@ topology:
     client-tls:
       kind: linux
       image: wbitt/network-multitool:latest
-      mgmt-ipv4: 172.20.20.31
+      mgmt-ipv4-address: 172.20.20.31/24
       exec:
         - apt-get update && apt-get install -y wpasupplicant
       binds:

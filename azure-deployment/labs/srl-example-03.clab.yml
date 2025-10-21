@@ -3,7 +3,7 @@ name: srl03
 topology:
   kinds:
     nokia_srlinux:
-      type: ixrd3
+      type: ixr-d3
       image: ghcr.io/nokia/srlinux
     linux:
       image: ghcr.io/hellt/network-multitool

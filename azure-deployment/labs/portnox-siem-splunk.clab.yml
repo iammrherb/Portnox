@@ -21,7 +21,7 @@ topology:
         SPLUNK_INDEX: portnox
         SPLUNK_SOURCETYPE: portnox:json
         SPLUNK_VERIFY_SSL: "false"
-      mgmt-ipv4: 172.20.20.10
+      mgmt-ipv4-address: 172.20.20.10/24
     
     # Splunk Enterprise
     splunk:
@@ -35,7 +35,7 @@ topology:
         - "8000:8000/tcp"  # Splunk Web
         - "8088:8088/tcp"  # HEC
         - "9997:9997/tcp"  # Splunk Forwarder
-      mgmt-ipv4: 172.20.20.20
+      mgmt-ipv4-address: 172.20.20.20/24
     
     # Portnox RADIUS Server (generating logs)
     portnox-radius:
@@ -51,7 +51,7 @@ topology:
       ports:
         - "1812:1812/udp"
         - "1813:1813/udp"
-      mgmt-ipv4: 172.20.20.30
+      mgmt-ipv4-address: 172.20.20.30/24
     
     # Portnox TACACS+ Server (generating logs)
     portnox-tacacs:
@@ -66,7 +66,7 @@ topology:
         SYSLOG_PORT: 514
       ports:
         - "49:49/tcp"
-      mgmt-ipv4: 172.20.20.31
+      mgmt-ipv4-address: 172.20.20.31/24
     
     # Portnox ZTNA Gateway (generating logs)
     portnox-ztna:
@@ -80,13 +80,13 @@ topology:
         SYSLOG_PORT: 514
       ports:
         - "443:443/tcp"
-      mgmt-ipv4: 172.20.20.32
+      mgmt-ipv4-address: 172.20.20.32/24
     
     # Test Network Device
     test-device:
       kind: ceos
       image: ceos:latest
-      mgmt-ipv4: 172.20.20.40
+      mgmt-ipv4-address: 172.20.20.40/24
       startup-config: |
         hostname test-device
         !
@@ -107,7 +107,7 @@ topology:
     test-client:
       kind: linux
       image: wbitt/network-multitool:latest
-      mgmt-ipv4: 172.20.20.50
+      mgmt-ipv4-address: 172.20.20.50/24
 
   links:
     - endpoints: ["portnox-siem-forwarder:eth1", "splunk:eth1"]

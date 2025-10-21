@@ -10,7 +10,7 @@ topology:
     aruba-core:
       kind: vr-aoscx
       image: vrnetlab/vr-aoscx:latest
-      mgmt-ipv4: 172.20.20.10
+      mgmt-ipv4-address: 172.20.20.10/24
       env:
         # VRNetlab settings
         CONNECTION_MODE: tc
@@ -39,7 +39,7 @@ topology:
     aruba-access1:
       kind: vr-aoscx
       image: vrnetlab/vr-aoscx:latest
-      mgmt-ipv4: 172.20.20.11
+      mgmt-ipv4-address: 172.20.20.11/24
       env:
         CONNECTION_MODE: tc
         VCPU: 2
@@ -60,7 +60,7 @@ topology:
     aruba-access2:
       kind: vr-aoscx
       image: vrnetlab/vr-aoscx:latest
-      mgmt-ipv4: 172.20.20.12
+      mgmt-ipv4-address: 172.20.20.12/24
       env:
         CONNECTION_MODE: tc
         VCPU: 2
@@ -81,7 +81,7 @@ topology:
     radius-server:
       kind: linux
       image: portnox/portnox-radius:latest
-      mgmt-ipv4: 172.20.20.50
+      mgmt-ipv4-address: 172.20.20.50/24
       env:
         # Required: Get these from Portnox Cloud
         PORTNOX_ORG_ID: your-org-id-here
@@ -100,7 +100,7 @@ topology:
     portnox-autoupdate:
       kind: linux
       image: portnox/portnox-autoupdate:latest
-      mgmt-ipv4: 172.20.20.51
+      mgmt-ipv4-address: 172.20.20.51/24
       env:
         # Required: Get these from Portnox Cloud
         PORTNOX_ORG_ID: your-org-id-here
@@ -115,7 +115,7 @@ topology:
     portnox-dhcp:
       kind: linux
       image: portnox/portnox-dhcp:latest
-      mgmt-ipv4: 172.20.20.52
+      mgmt-ipv4-address: 172.20.20.52/24
       env:
         # Required: Get these from Portnox Cloud
         PORTNOX_ORG_ID: your-org-id-here
@@ -129,7 +129,7 @@ topology:
     ldap-server:
       kind: linux
       image: osixia/openldap:latest
-      mgmt-ipv4: 172.20.20.60
+      mgmt-ipv4-address: 172.20.20.60/24
       env:
         LDAP_ORGANISATION: Example Inc
         LDAP_DOMAIN: example.com
@@ -150,7 +150,7 @@ topology:
     ca-server:
       kind: linux
       image: alpine:latest
-      mgmt-ipv4: 172.20.20.70
+      mgmt-ipv4-address: 172.20.20.70/24
       exec:
         - apk add --no-cache openssl
         - mkdir -p /ca/certs /ca/private
@@ -173,7 +173,7 @@ topology:
     client-data:
       kind: linux
       image: nicolaka/netshoot:latest
-      mgmt-ipv4: 172.20.20.100
+      mgmt-ipv4-address: 172.20.20.100/24
       env:
         CLIENT_TYPE: data
         VLAN_ID: 10
@@ -187,7 +187,7 @@ topology:
     client-voice:
       kind: linux
       image: nicolaka/netshoot:latest
-      mgmt-ipv4: 172.20.20.101
+      mgmt-ipv4-address: 172.20.20.101/24
       env:
         CLIENT_TYPE: voice
         VLAN_ID: 20
@@ -201,7 +201,7 @@ topology:
     client-guest:
       kind: linux
       image: nicolaka/netshoot:latest
-      mgmt-ipv4: 172.20.20.102
+      mgmt-ipv4-address: 172.20.20.102/24
       env:
         CLIENT_TYPE: guest
         VLAN_ID: 30
@@ -216,7 +216,7 @@ topology:
     prometheus:
       kind: linux
       image: prom/prometheus:latest
-      mgmt-ipv4: 172.20.20.200
+      mgmt-ipv4-address: 172.20.20.200/24
       env:
         PROMETHEUS_RETENTION_TIME: 15d
         PROMETHEUS_STORAGE_PATH: /prometheus
@@ -228,7 +228,7 @@ topology:
     grafana:
       kind: linux
       image: grafana/grafana:latest
-      mgmt-ipv4: 172.20.20.201
+      mgmt-ipv4-address: 172.20.20.201/24
       env:
         GF_SECURITY_ADMIN_USER: admin
         GF_SECURITY_ADMIN_PASSWORD: admin

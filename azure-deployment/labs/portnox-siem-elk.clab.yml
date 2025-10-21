@@ -20,7 +20,7 @@ topology:
         ELASTICSEARCH_INDEX: portnox-logs
         ELASTICSEARCH_USERNAME: ${ES_USERNAME:-elastic}
         ELASTICSEARCH_PASSWORD: ${ES_PASSWORD:-changeme}
-      mgmt-ipv4: 172.20.20.10
+      mgmt-ipv4-address: 172.20.20.10/24
     
     # Elasticsearch
     elasticsearch:
@@ -33,7 +33,7 @@ topology:
       ports:
         - "9200:9200/tcp"
         - "9300:9300/tcp"
-      mgmt-ipv4: 172.20.20.20
+      mgmt-ipv4-address: 172.20.20.20/24
     
     # Logstash
     logstash:
@@ -44,7 +44,7 @@ topology:
       ports:
         - "5044:5044/tcp"  # Beats input
         - "9600:9600/tcp"  # Logstash API
-      mgmt-ipv4: 172.20.20.21
+      mgmt-ipv4-address: 172.20.20.21/24
       binds:
         - /data/configs/logstash:/usr/share/logstash/pipeline:ro
     
@@ -56,7 +56,7 @@ topology:
         ELASTICSEARCH_HOSTS: http://172.20.20.20:9200
       ports:
         - "5601:5601/tcp"
-      mgmt-ipv4: 172.20.20.22
+      mgmt-ipv4-address: 172.20.20.22/24
     
     # Portnox RADIUS Server (generating logs)
     portnox-radius:
@@ -72,13 +72,13 @@ topology:
       ports:
         - "1812:1812/udp"
         - "1813:1813/udp"
-      mgmt-ipv4: 172.20.20.30
+      mgmt-ipv4-address: 172.20.20.30/24
     
     # Test Switch (generating authentication events)
     test-switch:
       kind: ceos
       image: ceos:latest
-      mgmt-ipv4: 172.20.20.40
+      mgmt-ipv4-address: 172.20.20.40/24
       startup-config: |
         hostname test-sw1
         !
@@ -96,7 +96,7 @@ topology:
     test-client:
       kind: linux
       image: wbitt/network-multitool:latest
-      mgmt-ipv4: 172.20.20.50
+      mgmt-ipv4-address: 172.20.20.50/24
       exec:
         - apt-get update && apt-get install -y wpasupplicant
 

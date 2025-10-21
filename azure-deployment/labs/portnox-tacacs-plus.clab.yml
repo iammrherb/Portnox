@@ -10,7 +10,7 @@ topology:
     portnox-tacacs:
       kind: linux
       image: portnox/portnox-tacacs:latest
-      mgmt-ipv4: 172.20.21.10
+      mgmt-ipv4-address: 172.20.21.10/24
       ports:
         - "49:49/tcp"  # TACACS+
       env:
@@ -27,7 +27,7 @@ topology:
     portnox-autoupdate:
       kind: linux
       image: portnox/portnox-autoupdate:latest
-      mgmt-ipv4: 172.20.21.11
+      mgmt-ipv4-address: 172.20.21.11/24
       env:
         # Required: Get these from Portnox Cloud
         PORTNOX_ORG_ID: your-org-id-here
@@ -42,7 +42,7 @@ topology:
     portnox-siem:
       kind: linux
       image: portnox/portnox-siem:latest
-      mgmt-ipv4: 172.20.21.12
+      mgmt-ipv4-address: 172.20.21.12/24
       env:
         # Required: Get these from Portnox Cloud
         PORTNOX_ORG_ID: your-org-id-here
@@ -59,55 +59,55 @@ topology:
     cisco-router:
       kind: vr-csr
       image: vrnetlab/vr-csr:17.03.06
-      mgmt-ipv4: 172.20.21.20
+      mgmt-ipv4-address: 172.20.21.20/24
       startup-config: /data/configs/cisco-router-tacacs.cfg
 
     # Cisco Nexus Switch (TACACS+ Client)
     cisco-nexus:
       kind: vr-n9kv
       image: vrnetlab/vr-n9kv:10.2.3
-      mgmt-ipv4: 172.20.21.21
+      mgmt-ipv4-address: 172.20.21.21/24
       startup-config: /data/configs/cisco-nexus-tacacs.cfg
 
     # Arista Router (TACACS+ Client)
     arista-router:
       kind: ceos
       image: ceos:4.30.0F
-      mgmt-ipv4: 172.20.21.22
+      mgmt-ipv4-address: 172.20.21.22/24
       startup-config: /data/configs/arista-router-tacacs.cfg
 
     # Juniper Router (TACACS+ Client)
     juniper-router:
       kind: vr-vjunosrouter
       image: vrnetlab/vr-vjunosrouter:23.2R1
-      mgmt-ipv4: 172.20.21.23
+      mgmt-ipv4-address: 172.20.21.23/24
       startup-config: /data/configs/juniper-router-tacacs.cfg
 
     # Palo Alto Firewall (TACACS+ Client)
     palo-alto-fw:
       kind: vr-pan
       image: vrnetlab/vr-pan:11.0.0
-      mgmt-ipv4: 172.20.21.24
+      mgmt-ipv4-address: 172.20.21.24/24
       startup-config: /data/configs/palo-alto-tacacs.cfg
 
     # Fortinet FortiGate (TACACS+ Client)
     fortigate-fw:
       kind: cisco_ftdv
       image: vrnetlab/vr-ftdv:7.2.0
-      mgmt-ipv4: 172.20.21.25
+      mgmt-ipv4-address: 172.20.21.25/24
       startup-config: /data/configs/fortigate-tacacs.cfg
 
     # F5 BIG-IP (TACACS+ Client)
     f5-bigip:
       kind: linux
       image: f5devcentral/f5-demo-httpd:latest
-      mgmt-ipv4: 172.20.21.26
+      mgmt-ipv4-address: 172.20.21.26/24
 
     # Active Directory (Identity Provider)
     ad-server:
       kind: linux
       image: ubuntu/samba-ad-dc:latest
-      mgmt-ipv4: 172.20.21.30
+      mgmt-ipv4-address: 172.20.21.30/24
       env:
         DOMAIN: CORP.LOCAL
         ADMINPASS: Admin123!
@@ -122,7 +122,7 @@ topology:
     saml-idp:
       kind: linux
       image: kristophjunge/test-saml-idp:latest
-      mgmt-ipv4: 172.20.21.32
+      mgmt-ipv4-address: 172.20.21.32/24
       ports:
         - "8080:8080"
         - "8443:8443"
@@ -131,7 +131,7 @@ topology:
     audit-server:
       kind: linux
       image: ubuntu:22.04
-      mgmt-ipv4: 172.20.21.40
+      mgmt-ipv4-address: 172.20.21.40/24
       ports:
         - "514:514/udp"
         - "514:514/tcp"
@@ -144,7 +144,7 @@ topology:
     jump-host:
       kind: linux
       image: ubuntu:22.04
-      mgmt-ipv4: 172.20.21.50
+      mgmt-ipv4-address: 172.20.21.50/24
       exec:
         - apt-get update
         - apt-get install -y openssh-client telnet curl wget
@@ -153,7 +153,7 @@ topology:
     monitoring:
       kind: linux
       image: prom/prometheus:latest
-      mgmt-ipv4: 172.20.21.60
+      mgmt-ipv4-address: 172.20.21.60/24
       ports:
         - "9090:9090"
 

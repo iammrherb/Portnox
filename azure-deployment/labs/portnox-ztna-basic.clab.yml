@@ -17,7 +17,7 @@ topology:
       ports:
         - "443:443/tcp"   # HTTPS for ZTNA access
         - "8443:8443/tcp" # Management API
-      mgmt-ipv4: 172.20.20.10
+      mgmt-ipv4-address: 172.20.20.10/24
     
     # Portnox Auto-Update Container
     portnox-autoupdate:
@@ -27,13 +27,13 @@ topology:
         PORTNOX_CLOUD_URL: ${PORTNOX_CLOUD_URL:-https://yourorg.portnox.cloud}
         PORTNOX_GATEWAY_TOKEN: ${PORTNOX_GATEWAY_TOKEN:-your-gateway-token}
         UPDATE_INTERVAL: ${UPDATE_INTERVAL:-300}
-      mgmt-ipv4: 172.20.20.11
+      mgmt-ipv4-address: 172.20.20.11/24
     
     # Protected Application: Web Server
     app-web:
       kind: linux
       image: nginx:latest
-      mgmt-ipv4: 172.20.20.20
+      mgmt-ipv4-address: 172.20.20.20/24
       ports:
         - "8080:80/tcp"
       binds:
@@ -43,7 +43,7 @@ topology:
     app-api:
       kind: linux
       image: node:18-alpine
-      mgmt-ipv4: 172.20.20.21
+      mgmt-ipv4-address: 172.20.20.21/24
       ports:
         - "3000:3000/tcp"
       exec:
@@ -54,7 +54,7 @@ topology:
     app-database:
       kind: linux
       image: postgres:15-alpine
-      mgmt-ipv4: 172.20.20.22
+      mgmt-ipv4-address: 172.20.20.22/24
       env:
         POSTGRES_PASSWORD: ${DB_PASSWORD:-secretpassword}
         POSTGRES_USER: ${DB_USER:-appuser}
@@ -66,7 +66,7 @@ topology:
     app-fileserver:
       kind: linux
       image: alpine:latest
-      mgmt-ipv4: 172.20.20.23
+      mgmt-ipv4-address: 172.20.20.23/24
       ports:
         - "2049:2049/tcp"  # NFS
         - "445:445/tcp"    # SMB
@@ -78,7 +78,7 @@ topology:
     app-ssh:
       kind: linux
       image: ubuntu:22.04
-      mgmt-ipv4: 172.20.20.24
+      mgmt-ipv4-address: 172.20.20.24/24
       ports:
         - "2222:22/tcp"
       exec:
@@ -90,7 +90,7 @@ topology:
     app-rdp:
       kind: linux
       image: ubuntu:22.04
-      mgmt-ipv4: 172.20.20.25
+      mgmt-ipv4-address: 172.20.20.25/24
       ports:
         - "3389:3389/tcp"
       exec:
@@ -102,7 +102,7 @@ topology:
     test-client:
       kind: linux
       image: wbitt/network-multitool:latest
-      mgmt-ipv4: 172.20.20.30
+      mgmt-ipv4-address: 172.20.20.30/24
       exec:
         - apt-get update && apt-get install -y curl wget
 

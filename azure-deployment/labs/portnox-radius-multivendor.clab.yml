@@ -18,13 +18,13 @@ topology:
       ports:
         - "1812:1812/udp"
         - "1813:1813/udp"
-      mgmt-ipv4: 172.20.20.10
+      mgmt-ipv4-address: 172.20.20.10/24
     
     # Cisco Catalyst Switch
     cisco-catalyst:
       kind: ceos
       image: ceos:latest
-      mgmt-ipv4: 172.20.20.20
+      mgmt-ipv4-address: 172.20.20.20/24
       startup-config: |
         hostname cisco-catalyst
         !
@@ -55,7 +55,7 @@ topology:
     arista-eos:
       kind: ceos
       image: ceos:latest
-      mgmt-ipv4: 172.20.20.21
+      mgmt-ipv4-address: 172.20.20.21/24
       startup-config: |
         hostname arista-eos
         !
@@ -82,7 +82,7 @@ topology:
     juniper-ex:
       kind: vr-veos
       image: vrnetlab/vr-vmx:latest
-      mgmt-ipv4: 172.20.20.22
+      mgmt-ipv4-address: 172.20.20.22/24
       startup-config: |
         set system host-name juniper-ex
         set protocols dot1x authenticator authentication-profile-name PORTNOX
@@ -103,7 +103,7 @@ topology:
     aruba-cx:
       kind: linux
       image: arubanetworks/aoscx:latest
-      mgmt-ipv4: 172.20.20.23
+      mgmt-ipv4-address: 172.20.20.23/24
       startup-config: |
         hostname aruba-cx
         !
@@ -127,19 +127,19 @@ topology:
     paloalto-fw:
       kind: panos
       image: vrnetlab/vr-panos:latest
-      mgmt-ipv4: 172.20.20.24
+      mgmt-ipv4-address: 172.20.20.24/24
     
     # Fortinet FortiGate (for 802.1X on FortiSwitch)
     fortinet-fg:
       kind: fortinet_fortigate
       image: vrnetlab/vr-fortios:latest
-      mgmt-ipv4: 172.20.20.25
+      mgmt-ipv4-address: 172.20.20.25/24
     
     # Client: EAP-TLS
     client-eap-tls:
       kind: linux
       image: wbitt/network-multitool:latest
-      mgmt-ipv4: 172.20.20.30
+      mgmt-ipv4-address: 172.20.20.30/24
       exec:
         - apt-get update && apt-get install -y wpasupplicant
       binds:
@@ -150,7 +150,7 @@ topology:
     client-eap-peap:
       kind: linux
       image: wbitt/network-multitool:latest
-      mgmt-ipv4: 172.20.20.31
+      mgmt-ipv4-address: 172.20.20.31/24
       exec:
         - apt-get update && apt-get install -y wpasupplicant
       binds:
@@ -160,7 +160,7 @@ topology:
     client-eap-ttls:
       kind: linux
       image: wbitt/network-multitool:latest
-      mgmt-ipv4: 172.20.20.32
+      mgmt-ipv4-address: 172.20.20.32/24
       exec:
         - apt-get update && apt-get install -y wpasupplicant
       binds:
