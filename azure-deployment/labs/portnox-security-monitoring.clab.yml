@@ -1,0 +1,171 @@
+name: portnox-security-monitoring
+
+topology:
+  nodes:
+    # Portnox RADIUS
+    portnox-radius:
+      kind: linux
+      image: portnox/portnox-radius:latest
+      env:
+        PORTNOX_CLOUD_URL: ${PORTNOX_CLOUD_URL:-https://yourorg.portnox.cloud}
+        PORTNOX_GATEWAY_TOKEN: ${PORTNOX_GATEWAY_TOKEN:-your-gateway-token}
+      ports:
+        - "1812:1812/udp"
+        - "1813:1813/udp"
+    
+    # Portnox SIEM Forwarder
+    portnox-siem-forwarder:
+      kind: linux
+      image: portnox/portnox-siem-forwarder:latest
+      env:
+        PORTNOX_CLOUD_URL: ${PORTNOX_CLOUD_URL:-https://yourorg.portnox.cloud}
+        PORTNOX_GATEWAY_TOKEN: ${PORTNOX_GATEWAY_TOKEN:-your-siem-token}
+        SIEM_TYPE: syslog
+        SIEM_HOST: wazuh
+        SIEM_PORT: 514
+    
+    # Kali Linux (Penetration Testing)
+    kali-linux:
+      kind: linux
+      image: kalilinux/kali-rolling:latest
+      exec:
+        - apt-get update
+        - apt-get install -y kali-linux-default metasploit-framework nmap wireshark
+      ports:
+        - "5900:5900"
+      binds:
+        - /data/security/kali:/root
+    
+    # Parrot Security OS (Penetration Testing)
+    parrot-security:
+      kind: linux
+      image: parrotsec/security:latest
+      exec:
+        - apt-get update
+        - apt-get install -y parrot-tools-full
+      ports:
+        - "5901:5900"
+      binds:
+        - /data/security/parrot:/root
+    
+    # Security Onion (Network Security Monitoring)
+    security-onion:
+      kind: linux
+      image: securityonionsolutions/securityonion:latest
+      env:
+        SO_ALLOW_CIDR: 0.0.0.0/0
+      ports:
+        - "443:443"
+        - "9200:9200"
+        - "5601:5601"
+      binds:
+        - /data/security/securityonion:/nsm
+    
+    # Wazuh Manager (SIEM + XDR)
+    wazuh-manager:
+      kind: linux
+      image: wazuh/wazuh-manager:latest
+      env:
+        INDEXER_URL: https://wazuh-indexer:9200
+        INDEXER_USERNAME: admin
+        INDEXER_PASSWORD: ${WAZUH_PASSWORD:-SecretPassword}
+        FILEBEAT_SSL_VERIFICATION_MODE: none
+      ports:
+        - "1514:1514/udp"
+        - "1515:1515"
+        - "514:514/udp"
+        - "55000:55000"
+    
+    # Wazuh Indexer (OpenSearch)
+    wazuh-indexer:
+      kind: linux
+      image: wazuh/wazuh-indexer:latest
+      env:
+        OPENSEARCH_JAVA_OPTS: "-Xms512m -Xmx512m"
+      ports:
+        - "9200:9200"
+    
+    # Wazuh Dashboard
+    wazuh-dashboard:
+      kind: linux
+      image: wazuh/wazuh-dashboard:latest
+      env:
+        INDEXER_USERNAME: admin
+        INDEXER_PASSWORD: ${WAZUH_PASSWORD:-SecretPassword}
+        WAZUH_API_URL: https://wazuh-manager
+        API_USERNAME: wazuh-wui
+        API_PASSWORD: ${WAZUH_PASSWORD:-SecretPassword}
+      ports:
+        - "5601:5601"
+    
+    # AlienVault OSSIM (SIEM)
+    alienvault-ossim:
+      kind: linux
+      image: alienvault/ossim:latest
+      ports:
+        - "8080:443"
+      binds:
+        - /data/security/alienvault:/var/ossim
+    
+    # Snort IDS
+    snort-ids:
+      kind: linux
+      image: ciscotalos/snort3:latest
+      exec:
+        - snort -c /etc/snort/snort.lua -i eth0 -A alert_fast -s 65535 -k none
+      binds:
+        - /data/security/snort:/var/log/snort
+    
+    # Suricata IDS
+    suricata-ids:
+      kind: linux
+      image: jasonish/suricata:latest
+      exec:
+        - suricata -c /etc/suricata/suricata.yaml -i eth0
+      binds:
+        - /data/security/suricata:/var/log/suricata
+    
+    # Test Network Switch
+    test-switch:
+      kind: ceos
+      image: ceos:latest
+      startup-config: |
+        hostname test-sw1
+        aaa new-model
+        aaa authentication dot1x default group radius
+        radius server PORTNOX
+         address ipv4 172.20.20.10 auth-port 1812 acct-port 1813
+         key testing123
+        !
+        interface Ethernet2
+         switchport mode access
+         authentication port-control auto
+         dot1x pae authenticator
+        !
+        interface Ethernet3
+         description SPAN destination
+         switchport mode access
+        !
+        monitor session 1 source interface Ethernet2
+        monitor session 1 destination interface Ethernet3
+    
+    # Monitored Client
+    monitored-client:
+      kind: linux
+      image: ubuntu:22.04
+      exec:
+        - apt-get update
+        - apt-get install -y wpasupplicant netcat-openbsd curl wget
+
+  links:
+    - endpoints: ["portnox-radius:eth1", "test-switch:eth1"]
+    - endpoints: ["portnox-radius:eth2", "portnox-siem-forwarder:eth1"]
+    - endpoints: ["portnox-siem-forwarder:eth2", "wazuh-manager:eth1"]
+    - endpoints: ["wazuh-manager:eth2", "wazuh-indexer:eth1"]
+    - endpoints: ["wazuh-indexer:eth2", "wazuh-dashboard:eth1"]
+    - endpoints: ["test-switch:eth2", "monitored-client:eth1"]
+    - endpoints: ["test-switch:eth3", "snort-ids:eth1"]
+    - endpoints: ["test-switch:eth3", "suricata-ids:eth1"]
+    - endpoints: ["test-switch:eth3", "security-onion:eth1"]
+    - endpoints: ["kali-linux:eth1", "test-switch:eth4"]
+    - endpoints: ["parrot-security:eth1", "test-switch:eth5"]

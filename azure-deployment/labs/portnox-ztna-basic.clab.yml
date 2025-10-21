@@ -1,0 +1,109 @@
+name: portnox-ztna-basic
+
+topology:
+  nodes:
+    # Portnox ZTNA Gateway
+    ztna-gateway:
+      kind: linux
+      image: portnox/portnox-ztna-gateway:latest
+      env:
+        PORTNOX_CLOUD_URL: ${PORTNOX_CLOUD_URL:-https://yourorg.portnox.cloud}
+        PORTNOX_GATEWAY_TOKEN: ${PORTNOX_GATEWAY_TOKEN:-your-ztna-gateway-token}
+        PORTNOX_ORG_ID: ${PORTNOX_ORG_ID:-your-org-id}
+        GATEWAY_NAME: ${GATEWAY_NAME:-ztna-gateway-01}
+      ports:
+        - "443:443/tcp"
+        - "8443:8443/tcp"
+      binds:
+        - /data/configs/ztna:/config
+    
+    # Portnox Auto-Update Container
+    portnox-autoupdate:
+      kind: linux
+      image: portnox/portnox-auto-update:latest
+      env:
+        PORTNOX_CLOUD_URL: ${PORTNOX_CLOUD_URL:-https://yourorg.portnox.cloud}
+        PORTNOX_GATEWAY_TOKEN: ${PORTNOX_GATEWAY_TOKEN:-your-gateway-token}
+        UPDATE_INTERVAL: ${UPDATE_INTERVAL:-3600}
+    
+    # Protected Web Application
+    app-web:
+      kind: linux
+      image: nginx:latest
+      ports:
+        - "8080:80"
+      exec:
+        - sh -c 'echo "<h1>Protected Web App</h1><p>Accessed via ZTNA Gateway</p>" > /usr/share/nginx/html/index.html'
+    
+    # Protected API Application
+    app-api:
+      kind: linux
+      image: node:18-alpine
+      exec:
+        - sh -c 'npm install -g json-server && echo "{\"users\":[{\"id\":1,\"name\":\"Test User\"}]}" > /tmp/db.json && json-server --host 0.0.0.0 --port 3000 /tmp/db.json'
+      ports:
+        - "3000:3000"
+    
+    # Protected Database
+    app-database:
+      kind: linux
+      image: postgres:15-alpine
+      env:
+        POSTGRES_PASSWORD: ${DB_PASSWORD:-securepass123}
+        POSTGRES_USER: ${DB_USER:-appuser}
+        POSTGRES_DB: ${DB_NAME:-appdb}
+      ports:
+        - "5432:5432"
+    
+    # Protected File Server
+    app-fileserver:
+      kind: linux
+      image: alpine:latest
+      exec:
+        - apk add --no-cache samba
+        - mkdir -p /shared
+        - echo "Test file" > /shared/test.txt
+      ports:
+        - "445:445"
+    
+    # Protected SSH Server
+    app-ssh:
+      kind: linux
+      image: ubuntu:22.04
+      exec:
+        - apt-get update
+        - apt-get install -y openssh-server
+        - mkdir -p /run/sshd
+        - /usr/sbin/sshd -D
+      ports:
+        - "2222:22"
+    
+    # Protected RDP Server
+    app-rdp:
+      kind: linux
+      image: ubuntu:22.04
+      exec:
+        - apt-get update
+        - apt-get install -y xrdp xfce4 xfce4-goodies
+        - systemctl enable xrdp
+        - systemctl start xrdp
+      ports:
+        - "3389:3389"
+    
+    # Client Endpoint (for testing)
+    client-endpoint:
+      kind: linux
+      image: ubuntu:22.04
+      exec:
+        - apt-get update
+        - apt-get install -y curl wget netcat-openbsd
+
+  links:
+    - endpoints: ["ztna-gateway:eth1", "app-web:eth1"]
+    - endpoints: ["ztna-gateway:eth2", "app-api:eth1"]
+    - endpoints: ["ztna-gateway:eth3", "app-database:eth1"]
+    - endpoints: ["ztna-gateway:eth4", "app-fileserver:eth1"]
+    - endpoints: ["ztna-gateway:eth5", "app-ssh:eth1"]
+    - endpoints: ["ztna-gateway:eth6", "app-rdp:eth1"]
+    - endpoints: ["ztna-gateway:eth7", "client-endpoint:eth1"]
+    - endpoints: ["portnox-autoupdate:eth1", "ztna-gateway:eth8"]

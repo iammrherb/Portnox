@@ -1,0 +1,128 @@
+name: portnox-radius-multivendor
+
+topology:
+  nodes:
+    # Portnox Local RADIUS Container
+    portnox-radius:
+      kind: linux
+      image: portnox/portnox-radius:latest
+      env:
+        PORTNOX_CLOUD_URL: ${PORTNOX_CLOUD_URL:-https://yourorg.portnox.cloud}
+        PORTNOX_GATEWAY_TOKEN: ${PORTNOX_GATEWAY_TOKEN:-your-gateway-token}
+        PORTNOX_ORG_ID: ${PORTNOX_ORG_ID:-your-org-id}
+        RADIUS_SECRET: ${RADIUS_SECRET:-testing123}
+      ports:
+        - "1812:1812/udp"
+        - "1813:1813/udp"
+    
+    # Cisco Catalyst Switch
+    cisco-catalyst:
+      kind: ceos
+      image: ceos:latest
+      startup-config: |
+        hostname cisco-catalyst
+        aaa new-model
+        aaa authentication dot1x default group radius
+        radius server PORTNOX
+         address ipv4 172.20.20.10 auth-port 1812 acct-port 1813
+         key testing123
+        dot1x system-auth-control
+        interface Ethernet2
+         switchport mode access
+         authentication port-control auto
+         dot1x pae authenticator
+    
+    # Arista EOS Switch
+    arista-eos:
+      kind: ceos
+      image: ceos:latest
+      startup-config: |
+        hostname arista-eos
+        aaa authentication dot1x default group radius
+        radius-server host 172.20.20.10 auth-port 1812 acct-port 1813 key testing123
+        dot1x system-auth-control
+        interface Ethernet2
+         switchport mode access
+         dot1x pae authenticator
+    
+    # Juniper EX Switch
+    juniper-ex:
+      kind: linux
+      image: vrnetlab/vr-vjunosevolved:latest
+      startup-config: |
+        set system services ssh
+        set interfaces ge-0/0/0 unit 0 family inet dhcp
+        set protocols dot1x authenticator interface ge-0/0/1
+        set access radius-server 172.20.20.10 port 1812 secret testing123
+    
+    # HPE Aruba CX Switch
+    aruba-cx:
+      kind: linux
+      image: vrnetlab/vr-aoscx:latest
+      startup-config: |
+        hostname aruba-cx
+        radius-server host 172.20.20.10 key testing123
+        aaa authentication port-access dot1x authenticator radius
+        interface 1/1/2
+         aaa authentication port-access authenticator
+    
+    # Palo Alto Firewall (for 802.1X on firewall)
+    paloalto-fw:
+      kind: linux
+      image: vrnetlab/vr-pan:latest
+      startup-config: |
+        set deviceconfig system radius-server PORTNOX server 172.20.20.10
+        set deviceconfig system radius-server PORTNOX port 1812
+        set deviceconfig system radius-server PORTNOX secret testing123
+    
+    # Fortinet FortiGate (for 802.1X on firewall)
+    fortinet-fg:
+      kind: linux
+      image: vrnetlab/vr-fortios:latest
+      startup-config: |
+        config user radius
+         edit "PORTNOX"
+          set server "172.20.20.10"
+          set secret testing123
+         next
+        end
+    
+    # Linux Clients with different EAP methods
+    client-eap-tls:
+      kind: linux
+      image: ubuntu:22.04
+      exec:
+        - apt-get update
+        - apt-get install -y wpasupplicant
+      binds:
+        - /data/configs/wpa_supplicant/eap-tls.conf:/etc/wpa_supplicant/wpa_supplicant.conf
+        - /data/configs/ca:/etc/ssl/certs/portnox
+    
+    client-eap-peap:
+      kind: linux
+      image: ubuntu:22.04
+      exec:
+        - apt-get update
+        - apt-get install -y wpasupplicant
+      binds:
+        - /data/configs/wpa_supplicant/eap-peap.conf:/etc/wpa_supplicant/wpa_supplicant.conf
+    
+    client-eap-ttls:
+      kind: linux
+      image: ubuntu:22.04
+      exec:
+        - apt-get update
+        - apt-get install -y wpasupplicant
+      binds:
+        - /data/configs/wpa_supplicant/eap-ttls.conf:/etc/wpa_supplicant/wpa_supplicant.conf
+
+  links:
+    - endpoints: ["portnox-radius:eth1", "cisco-catalyst:eth1"]
+    - endpoints: ["portnox-radius:eth2", "arista-eos:eth1"]
+    - endpoints: ["portnox-radius:eth3", "juniper-ex:eth1"]
+    - endpoints: ["portnox-radius:eth4", "aruba-cx:eth1"]
+    - endpoints: ["portnox-radius:eth5", "paloalto-fw:eth1"]
+    - endpoints: ["portnox-radius:eth6", "fortinet-fg:eth1"]
+    - endpoints: ["cisco-catalyst:eth2", "client-eap-tls:eth1"]
+    - endpoints: ["arista-eos:eth2", "client-eap-peap:eth1"]
+    - endpoints: ["juniper-ex:eth2", "client-eap-ttls:eth1"]

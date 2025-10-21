@@ -1,0 +1,121 @@
+name: portnox-tacacs-basic
+
+topology:
+  nodes:
+    # Portnox TACACS+ Container
+    portnox-tacacs:
+      kind: linux
+      image: portnox/portnox-tacacs:latest
+      env:
+        PORTNOX_CLOUD_URL: ${PORTNOX_CLOUD_URL:-https://yourorg.portnox.cloud}
+        PORTNOX_GATEWAY_TOKEN: ${PORTNOX_GATEWAY_TOKEN:-your-tacacs-gateway-token}
+        PORTNOX_ORG_ID: ${PORTNOX_ORG_ID:-your-org-id}
+        TACACS_SECRET: ${TACACS_SECRET:-tacacskey123}
+      ports:
+        - "49:49/tcp"
+      binds:
+        - /data/configs/tacacs:/config
+    
+    # Cisco Router
+    cisco-router:
+      kind: ceos
+      image: ceos:latest
+      startup-config: |
+        hostname cisco-rtr1
+        !
+        aaa new-model
+        aaa authentication login default group tacacs+ local
+        aaa authorization exec default group tacacs+ local
+        aaa authorization commands 15 default group tacacs+ local
+        aaa accounting exec default start-stop group tacacs+
+        aaa accounting commands 15 default start-stop group tacacs+
+        !
+        tacacs server PORTNOX
+         address ipv4 172.20.20.10
+         key tacacskey123
+        !
+        ip tacacs source-interface Ethernet1
+        !
+        interface Ethernet1
+         no switchport
+         ip address 172.20.20.2/24
+        !
+        line vty 0 4
+         transport input ssh
+    
+    # Arista Switch
+    arista-switch:
+      kind: ceos
+      image: ceos:latest
+      startup-config: |
+        hostname arista-sw1
+        !
+        aaa authentication login default group tacacs+ local
+        aaa authorization exec default group tacacs+ local
+        aaa authorization commands all default group tacacs+ local
+        aaa accounting exec default start-stop group tacacs+
+        aaa accounting commands all default start-stop group tacacs+
+        !
+        tacacs-server host 172.20.20.10 key tacacskey123
+        !
+        interface Ethernet1
+         no switchport
+         ip address 172.20.20.3/24
+    
+    # Juniper Router
+    juniper-router:
+      kind: linux
+      image: vrnetlab/vr-vjunosevolved:latest
+      startup-config: |
+        set system tacplus-server 172.20.20.10 secret tacacskey123
+        set system tacplus-server 172.20.20.10 single-connection
+        set system authentication-order tacplus
+        set system accounting events login
+        set system accounting destination tacplus
+    
+    # Palo Alto Firewall
+    paloalto-fw:
+      kind: linux
+      image: vrnetlab/vr-pan:latest
+      startup-config: |
+        set deviceconfig system tacacs-server PORTNOX server 172.20.20.10
+        set deviceconfig system tacacs-server PORTNOX port 49
+        set deviceconfig system tacacs-server PORTNOX secret tacacskey123
+        set deviceconfig system authentication-profile TACACS-AUTH
+        set deviceconfig system authentication-profile TACACS-AUTH method tacacs
+    
+    # Fortinet FortiGate
+    fortinet-fg:
+      kind: linux
+      image: vrnetlab/vr-fortios:latest
+      startup-config: |
+        config user tacacs+
+         edit "PORTNOX"
+          set server "172.20.20.10"
+          set key tacacskey123
+          set authen-type auto
+         next
+        end
+        config system admin
+         edit "tacacs-admin"
+          set remote-auth enable
+          set accprofile "super_admin"
+          set remote-group "network-admin"
+         next
+        end
+    
+    # Admin Workstation
+    admin-workstation:
+      kind: linux
+      image: ubuntu:22.04
+      exec:
+        - apt-get update
+        - apt-get install -y openssh-client telnet
+
+  links:
+    - endpoints: ["portnox-tacacs:eth1", "cisco-router:eth1"]
+    - endpoints: ["portnox-tacacs:eth2", "arista-switch:eth1"]
+    - endpoints: ["portnox-tacacs:eth3", "juniper-router:eth1"]
+    - endpoints: ["portnox-tacacs:eth4", "paloalto-fw:eth1"]
+    - endpoints: ["portnox-tacacs:eth5", "fortinet-fg:eth1"]
+    - endpoints: ["admin-workstation:eth1", "cisco-router:eth2"]

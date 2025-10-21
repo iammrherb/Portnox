@@ -1,0 +1,102 @@
+name: portnox-ztna-multi-idp
+
+topology:
+  nodes:
+    # Portnox ZTNA Gateway
+    ztna-gateway:
+      kind: linux
+      image: portnox/portnox-ztna-gateway:latest
+      env:
+        PORTNOX_CLOUD_URL: ${PORTNOX_CLOUD_URL:-https://yourorg.portnox.cloud}
+        PORTNOX_GATEWAY_TOKEN: ${PORTNOX_GATEWAY_TOKEN:-your-ztna-gateway-token}
+        PORTNOX_ORG_ID: ${PORTNOX_ORG_ID:-your-org-id}
+      ports:
+        - "443:443/tcp"
+        - "8443:8443/tcp"
+    
+    # Azure AD / Entra ID Simulator
+    idp-azure-ad:
+      kind: linux
+      image: quay.io/keycloak/keycloak:latest
+      env:
+        KEYCLOAK_ADMIN: admin
+        KEYCLOAK_ADMIN_PASSWORD: admin
+        KC_HOSTNAME: azure-ad.local
+      ports:
+        - "8080:8080"
+      exec:
+        - /opt/keycloak/bin/kc.sh start-dev
+    
+    # Okta Simulator
+    idp-okta:
+      kind: linux
+      image: quay.io/keycloak/keycloak:latest
+      env:
+        KEYCLOAK_ADMIN: admin
+        KEYCLOAK_ADMIN_PASSWORD: admin
+        KC_HOSTNAME: okta.local
+      ports:
+        - "8081:8080"
+      exec:
+        - /opt/keycloak/bin/kc.sh start-dev
+    
+    # Google Workspace Simulator
+    idp-google:
+      kind: linux
+      image: quay.io/keycloak/keycloak:latest
+      env:
+        KEYCLOAK_ADMIN: admin
+        KEYCLOAK_ADMIN_PASSWORD: admin
+        KC_HOSTNAME: google.local
+      ports:
+        - "8082:8080"
+      exec:
+        - /opt/keycloak/bin/kc.sh start-dev
+    
+    # OneLogin Simulator
+    idp-onelogin:
+      kind: linux
+      image: quay.io/keycloak/keycloak:latest
+      env:
+        KEYCLOAK_ADMIN: admin
+        KEYCLOAK_ADMIN_PASSWORD: admin
+        KC_HOSTNAME: onelogin.local
+      ports:
+        - "8083:8080"
+      exec:
+        - /opt/keycloak/bin/kc.sh start-dev
+    
+    # Protected Applications
+    app-crm:
+      kind: linux
+      image: nginx:latest
+      exec:
+        - sh -c 'echo "<h1>CRM Application</h1><p>Requires Azure AD authentication</p>" > /usr/share/nginx/html/index.html'
+    
+    app-erp:
+      kind: linux
+      image: nginx:latest
+      exec:
+        - sh -c 'echo "<h1>ERP Application</h1><p>Requires Okta authentication</p>" > /usr/share/nginx/html/index.html'
+    
+    app-hr:
+      kind: linux
+      image: nginx:latest
+      exec:
+        - sh -c 'echo "<h1>HR Portal</h1><p>Requires Google Workspace authentication</p>" > /usr/share/nginx/html/index.html'
+    
+    app-finance:
+      kind: linux
+      image: nginx:latest
+      exec:
+        - sh -c 'echo "<h1>Finance System</h1><p>Requires OneLogin authentication</p>" > /usr/share/nginx/html/index.html'
+
+  links:
+    - endpoints: ["ztna-gateway:eth1", "idp-azure-ad:eth1"]
+    - endpoints: ["ztna-gateway:eth2", "idp-okta:eth1"]
+    - endpoints: ["ztna-gateway:eth3", "idp-google:eth1"]
+    - endpoints: ["ztna-gateway:eth4", "idp-onelogin:eth1"]
+    - endpoints: ["ztna-gateway:eth5", "app-crm:eth1"]
+    - endpoints: ["ztna-gateway:eth6", "app-erp:eth1"]
+    - endpoints: ["ztna-gateway:eth7", "app-hr:eth1"]
+    - endpoints: ["ztna-gateway:eth8", "app-finance:eth1"]

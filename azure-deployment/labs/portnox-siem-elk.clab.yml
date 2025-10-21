@@ -1,0 +1,91 @@
+name: portnox-siem-elk
+
+topology:
+  nodes:
+    # Portnox RADIUS with SIEM Forwarder
+    portnox-radius:
+      kind: linux
+      image: portnox/portnox-radius:latest
+      env:
+        PORTNOX_CLOUD_URL: ${PORTNOX_CLOUD_URL:-https://yourorg.portnox.cloud}
+        PORTNOX_GATEWAY_TOKEN: ${PORTNOX_GATEWAY_TOKEN:-your-gateway-token}
+        PORTNOX_ORG_ID: ${PORTNOX_ORG_ID:-your-org-id}
+      ports:
+        - "1812:1812/udp"
+        - "1813:1813/udp"
+    
+    # Portnox SIEM Forwarder
+    portnox-siem-forwarder:
+      kind: linux
+      image: portnox/portnox-siem-forwarder:latest
+      env:
+        PORTNOX_CLOUD_URL: ${PORTNOX_CLOUD_URL:-https://yourorg.portnox.cloud}
+        PORTNOX_GATEWAY_TOKEN: ${PORTNOX_GATEWAY_TOKEN:-your-siem-token}
+        SIEM_TYPE: elasticsearch
+        SIEM_HOST: elasticsearch
+        SIEM_PORT: 9200
+        SIEM_INDEX: portnox-logs
+      binds:
+        - /data/configs/siem:/config
+    
+    # Elasticsearch
+    elasticsearch:
+      kind: linux
+      image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+      env:
+        discovery.type: single-node
+        xpack.security.enabled: "false"
+        ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+      ports:
+        - "9200:9200"
+        - "9300:9300"
+    
+    # Logstash
+    logstash:
+      kind: linux
+      image: docker.elastic.co/logstash/logstash:8.11.0
+      env:
+        ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+      ports:
+        - "5000:5000"
+        - "5044:5044"
+      binds:
+        - /data/configs/logstash:/usr/share/logstash/pipeline
+    
+    # Kibana
+    kibana:
+      kind: linux
+      image: docker.elastic.co/kibana/kibana:8.11.0
+      env:
+        ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+      ports:
+        - "5601:5601"
+    
+    # Test Switch
+    test-switch:
+      kind: ceos
+      image: ceos:latest
+      startup-config: |
+        hostname test-sw1
+        aaa new-model
+        aaa authentication dot1x default group radius
+        radius server PORTNOX
+         address ipv4 172.20.20.10 auth-port 1812 acct-port 1813
+         key testing123
+        dot1x system-auth-control
+    
+    # Test Client
+    test-client:
+      kind: linux
+      image: ubuntu:22.04
+      exec:
+        - apt-get update
+        - apt-get install -y wpasupplicant curl
+
+  links:
+    - endpoints: ["portnox-radius:eth1", "test-switch:eth1"]
+    - endpoints: ["portnox-radius:eth2", "portnox-siem-forwarder:eth1"]
+    - endpoints: ["portnox-siem-forwarder:eth2", "elasticsearch:eth1"]
+    - endpoints: ["elasticsearch:eth2", "logstash:eth1"]
+    - endpoints: ["elasticsearch:eth3", "kibana:eth1"]
+    - endpoints: ["test-switch:eth2", "test-client:eth1"]

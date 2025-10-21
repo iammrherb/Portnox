@@ -1,0 +1,68 @@
+name: portnox-radius-basic-local
+
+topology:
+  nodes:
+    # Portnox Local RADIUS Container
+    portnox-radius:
+      kind: linux
+      image: portnox/portnox-radius:latest
+      env:
+        PORTNOX_CLOUD_URL: ${PORTNOX_CLOUD_URL:-https://yourorg.portnox.cloud}
+        PORTNOX_GATEWAY_TOKEN: ${PORTNOX_GATEWAY_TOKEN:-your-gateway-token}
+        PORTNOX_ORG_ID: ${PORTNOX_ORG_ID:-your-org-id}
+        RADIUS_SECRET: ${RADIUS_SECRET:-testing123}
+      ports:
+        - "1812:1812/udp"
+        - "1813:1813/udp"
+      binds:
+        - /data/configs/radius:/config
+    
+    # Cisco Switch (802.1X Authenticator)
+    cisco-switch:
+      kind: ceos
+      image: ceos:latest
+      startup-config: |
+        hostname cisco-sw1
+        !
+        aaa new-model
+        aaa authentication dot1x default group radius
+        aaa authorization network default group radius
+        !
+        radius server PORTNOX
+         address ipv4 172.20.20.10 auth-port 1812 acct-port 1813
+         key testing123
+        !
+        dot1x system-auth-control
+        !
+        interface Ethernet1
+         description Uplink
+         no switchport
+         ip address 172.20.20.2/24
+        !
+        interface Ethernet2
+         description Client Port
+         switchport mode access
+         authentication port-control auto
+         dot1x pae authenticator
+    
+    # Linux Client (802.1X Supplicant)
+    client-linux:
+      kind: linux
+      image: ubuntu:22.04
+      exec:
+        - apt-get update
+        - apt-get install -y wpasupplicant iproute2
+      binds:
+        - /data/configs/wpa_supplicant:/etc/wpa_supplicant
+    
+    # Windows Client Simulator
+    client-windows:
+      kind: linux
+      image: alpine:latest
+      exec:
+        - apk add --no-cache bash curl
+
+  links:
+    - endpoints: ["portnox-radius:eth1", "cisco-switch:eth1"]
+    - endpoints: ["cisco-switch:eth2", "client-linux:eth1"]
+    - endpoints: ["cisco-switch:eth3", "client-windows:eth1"]

@@ -1,0 +1,83 @@
+name: portnox-radius-basic-cloud
+
+topology:
+  nodes:
+    # Cisco Switch (802.1X Authenticator) - Points to Portnox Cloud
+    cisco-switch-cloud:
+      kind: ceos
+      image: ceos:latest
+      startup-config: |
+        hostname cisco-sw-cloud
+        !
+        aaa new-model
+        aaa authentication dot1x default group radius
+        aaa authorization network default group radius
+        !
+        ! IMPORTANT: Replace with your Portnox Cloud RADIUS IP and ports
+        ! Get these from: Portnox Cloud Portal > Settings > RADIUS Gateways
+        radius server PORTNOX-CLOUD
+         address ipv4 YOUR_PORTNOX_CLOUD_IP auth-port YOUR_AUTH_PORT acct-port YOUR_ACCT_PORT
+         key YOUR_RADIUS_SECRET
+        !
+        dot1x system-auth-control
+        !
+        interface Ethernet1
+         description Uplink to Internet
+         no switchport
+         ip address dhcp
+        !
+        interface Ethernet2
+         description Client Port
+         switchport mode access
+         authentication port-control auto
+         dot1x pae authenticator
+    
+    # Arista Switch (802.1X Authenticator) - Points to Portnox Cloud
+    arista-switch-cloud:
+      kind: ceos
+      image: ceos:latest
+      startup-config: |
+        hostname arista-sw-cloud
+        !
+        aaa authentication dot1x default group radius
+        aaa authorization exec default group radius
+        !
+        radius-server host YOUR_PORTNOX_CLOUD_IP auth-port YOUR_AUTH_PORT acct-port YOUR_ACCT_PORT key YOUR_RADIUS_SECRET
+        !
+        dot1x system-auth-control
+        !
+        interface Ethernet1
+         description Uplink
+         no switchport
+         ip address dhcp
+        !
+        interface Ethernet2
+         description Client Port
+         switchport mode access
+         dot1x pae authenticator
+         dot1x authentication failure action traffic allow vlan 999
+    
+    # Linux Client (EAP-PEAP)
+    client-peap:
+      kind: linux
+      image: ubuntu:22.04
+      exec:
+        - apt-get update
+        - apt-get install -y wpasupplicant iproute2
+      binds:
+        - /data/configs/wpa_supplicant:/etc/wpa_supplicant
+    
+    # Linux Client (EAP-TLS)
+    client-tls:
+      kind: linux
+      image: ubuntu:22.04
+      exec:
+        - apt-get update
+        - apt-get install -y wpasupplicant iproute2
+      binds:
+        - /data/configs/wpa_supplicant:/etc/wpa_supplicant
+        - /data/configs/ca:/etc/ssl/certs/portnox
+
+  links:
+    - endpoints: ["cisco-switch-cloud:eth2", "client-peap:eth1"]
+    - endpoints: ["arista-switch-cloud:eth2", "client-tls:eth1"]

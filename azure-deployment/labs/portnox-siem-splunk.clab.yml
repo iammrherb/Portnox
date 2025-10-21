@@ -1,0 +1,78 @@
+name: portnox-siem-splunk
+
+topology:
+  nodes:
+    # Portnox RADIUS
+    portnox-radius:
+      kind: linux
+      image: portnox/portnox-radius:latest
+      env:
+        PORTNOX_CLOUD_URL: ${PORTNOX_CLOUD_URL:-https://yourorg.portnox.cloud}
+        PORTNOX_GATEWAY_TOKEN: ${PORTNOX_GATEWAY_TOKEN:-your-gateway-token}
+      ports:
+        - "1812:1812/udp"
+        - "1813:1813/udp"
+    
+    # Portnox TACACS+
+    portnox-tacacs:
+      kind: linux
+      image: portnox/portnox-tacacs:latest
+      env:
+        PORTNOX_CLOUD_URL: ${PORTNOX_CLOUD_URL:-https://yourorg.portnox.cloud}
+        PORTNOX_GATEWAY_TOKEN: ${PORTNOX_GATEWAY_TOKEN:-your-tacacs-token}
+      ports:
+        - "49:49/tcp"
+    
+    # Portnox SIEM Forwarder (Splunk)
+    portnox-siem-forwarder:
+      kind: linux
+      image: portnox/portnox-siem-forwarder:latest
+      env:
+        PORTNOX_CLOUD_URL: ${PORTNOX_CLOUD_URL:-https://yourorg.portnox.cloud}
+        PORTNOX_GATEWAY_TOKEN: ${PORTNOX_GATEWAY_TOKEN:-your-siem-token}
+        SIEM_TYPE: splunk
+        SIEM_HOST: splunk
+        SIEM_PORT: 8088
+        SIEM_HEC_TOKEN: ${SPLUNK_HEC_TOKEN:-your-hec-token}
+    
+    # Splunk Enterprise
+    splunk:
+      kind: linux
+      image: splunk/splunk:latest
+      env:
+        SPLUNK_START_ARGS: --accept-license
+        SPLUNK_PASSWORD: ${SPLUNK_PASSWORD:-Password123!}
+      ports:
+        - "8000:8000"
+        - "8088:8088"
+        - "9997:9997"
+    
+    # Test Devices
+    test-switch:
+      kind: ceos
+      image: ceos:latest
+      startup-config: |
+        hostname test-sw1
+        aaa new-model
+        aaa authentication dot1x default group radius
+        radius server PORTNOX
+         address ipv4 172.20.20.10 auth-port 1812 acct-port 1813
+         key testing123
+    
+    test-router:
+      kind: ceos
+      image: ceos:latest
+      startup-config: |
+        hostname test-rtr1
+        aaa new-model
+        aaa authentication login default group tacacs+ local
+        tacacs server PORTNOX
+         address ipv4 172.20.20.20
+         key tacacskey123
+
+  links:
+    - endpoints: ["portnox-radius:eth1", "test-switch:eth1"]
+    - endpoints: ["portnox-tacacs:eth1", "test-router:eth1"]
+    - endpoints: ["portnox-radius:eth2", "portnox-siem-forwarder:eth1"]
+    - endpoints: ["portnox-tacacs:eth2", "portnox-siem-forwarder:eth2"]
+    - endpoints: ["portnox-siem-forwarder:eth3", "splunk:eth1"]
