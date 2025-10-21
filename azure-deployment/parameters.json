@@ -6,7 +6,7 @@
       "value": "portnox-containerlab"
     },
     "adminUsername": {
-      "value": "azureuser"
+      "value": "labnox"
     },
     "authenticationType": {
       "value": "sshPublicKey"
