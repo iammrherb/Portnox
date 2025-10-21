@@ -97,7 +97,7 @@ jobs:
         if: steps.check_key.outcome == 'success'
         run: |
           scp -o StrictHostKeyChecking=no -i deployment-artifacts/azure_key \
-            azure-deployment/scripts/shutdown-vm.sh azureuser@${{ steps.vm_info.outputs.vm_ip }}:/tmp/
+            azure-deployment/scripts/shutdown-vm.sh labnox@${{ steps.vm_info.outputs.vm_ip }}:/tmp/
 
       - name: Run shutdown script on VM
         if: steps.check_key.outcome == 'success'
@@ -107,7 +107,7 @@ jobs:
             BACKUP_FLAG="--backup"
           fi
           
-          ssh -o StrictHostKeyChecking=no -i deployment-artifacts/azure_key azureuser@${{ steps.vm_info.outputs.vm_ip }} << EOF
+          ssh -o StrictHostKeyChecking=no -i deployment-artifacts/azure_key labnox@${{ steps.vm_info.outputs.vm_ip }} << EOF
             chmod +x /tmp/shutdown-vm.sh
             sudo /tmp/shutdown-vm.sh --${{ github.event.inputs.shutdown_mode }} $BACKUP_FLAG
           EOF

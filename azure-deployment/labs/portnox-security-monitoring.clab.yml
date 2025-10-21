@@ -1,0 +1,179 @@
+name: portnox-security-monitoring
+
+# Comprehensive Security Monitoring Lab
+# Includes Kali Linux, Parrot Security, Security Onion, Wazuh, AlienVault OSSIM
+# Demonstrates Portnox integration with security monitoring platforms
+
+topology:
+  nodes:
+    # Portnox RADIUS Server
+    portnox-radius:
+      kind: linux
+      image: portnox/portnox-radius:latest
+      env:
+        PORTNOX_CLOUD_URL: ${PORTNOX_CLOUD_URL:-https://yourorg.portnox.cloud}
+        PORTNOX_GATEWAY_TOKEN: ${PORTNOX_GATEWAY_TOKEN:-your-gateway-token}
+        RADIUS_SECRET: testing123
+      ports:
+        - "1812:1812/udp"
+        - "1813:1813/udp"
+      mgmt-ipv4: 172.20.20.10
+    
+    # Portnox SIEM Forwarder
+    portnox-siem:
+      kind: linux
+      image: portnox/portnox-siem-forwarder:latest
+      env:
+        PORTNOX_CLOUD_URL: ${PORTNOX_CLOUD_URL:-https://yourorg.portnox.cloud}
+        PORTNOX_GATEWAY_TOKEN: ${PORTNOX_GATEWAY_TOKEN:-your-siem-gateway-token}
+        SIEM_TYPE: syslog
+        SYSLOG_SERVER: 172.20.20.20
+        SYSLOG_PORT: 514
+      mgmt-ipv4: 172.20.20.11
+    
+    # Kali Linux (Penetration Testing)
+    kali-linux:
+      kind: linux
+      image: kalilinux/kali-rolling:latest
+      mgmt-ipv4: 172.20.20.20
+      ports:
+        - "5900:5900/tcp"  # VNC
+      exec:
+        - apt-get update
+        - apt-get install -y kali-linux-default
+    
+    # Parrot Security OS (Security Testing)
+    parrot-security:
+      kind: linux
+      image: parrotsec/security:latest
+      mgmt-ipv4: 172.20.20.21
+      ports:
+        - "5901:5900/tcp"  # VNC
+    
+    # Security Onion (Network Security Monitoring)
+    security-onion:
+      kind: linux
+      image: securityonionsolutions/securityonion:latest
+      mgmt-ipv4: 172.20.20.22
+      ports:
+        - "443:443/tcp"    # Web UI
+        - "9200:9200/tcp"  # Elasticsearch
+      env:
+        SO_ALLOW_CIDR: 0.0.0.0/0
+    
+    # Wazuh Manager (SIEM & XDR)
+    wazuh-manager:
+      kind: linux
+      image: wazuh/wazuh-manager:latest
+      mgmt-ipv4: 172.20.20.30
+      ports:
+        - "1514:1514/tcp"  # Agent communication
+        - "1515:1515/tcp"  # Agent enrollment
+        - "514:514/udp"    # Syslog
+        - "55000:55000/tcp" # API
+      env:
+        INDEXER_URL: https://172.20.20.31:9200
+        INDEXER_USERNAME: admin
+        INDEXER_PASSWORD: ${WAZUH_PASSWORD:-SecretPassword}
+        FILEBEAT_SSL_VERIFICATION_MODE: none
+    
+    # Wazuh Indexer (OpenSearch)
+    wazuh-indexer:
+      kind: linux
+      image: wazuh/wazuh-indexer:latest
+      mgmt-ipv4: 172.20.20.31
+      ports:
+        - "9200:9200/tcp"
+      env:
+        discovery.type: single-node
+        OPENSEARCH_JAVA_OPTS: "-Xms512m -Xmx512m"
+    
+    # Wazuh Dashboard
+    wazuh-dashboard:
+      kind: linux
+      image: wazuh/wazuh-dashboard:latest
+      mgmt-ipv4: 172.20.20.32
+      ports:
+        - "5601:5601/tcp"
+      env:
+        INDEXER_URL: https://172.20.20.31:9200
+        WAZUH_API_URL: https://172.20.20.30
+        API_USERNAME: wazuh-wui
+        API_PASSWORD: ${WAZUH_PASSWORD:-SecretPassword}
+    
+    # AlienVault OSSIM (Unified Security Management)
+    alienvault-ossim:
+      kind: linux
+      image: alienvault/ossim:latest
+      mgmt-ipv4: 172.20.20.40
+      ports:
+        - "443:443/tcp"    # Web UI
+        - "514:514/udp"    # Syslog
+      env:
+        OSSIM_ADMIN_PASSWORD: ${OSSIM_PASSWORD:-admin}
+    
+    # Snort IDS
+    snort-ids:
+      kind: linux
+      image: ciscotalos/snort3:latest
+      mgmt-ipv4: 172.20.20.50
+      exec:
+        - snort -c /etc/snort/snort.lua -i eth1 -A alert_fast -s 65535 -k none
+    
+    # Suricata IDS/IPS
+    suricata-ids:
+      kind: linux
+      image: jasonish/suricata:latest
+      mgmt-ipv4: 172.20.20.51
+      exec:
+        - suricata -c /etc/suricata/suricata.yaml -i eth1
+    
+    # Test Network Switch
+    test-switch:
+      kind: ceos
+      image: ceos:latest
+      mgmt-ipv4: 172.20.20.60
+      startup-config: |
+        hostname test-sw1
+        !
+        aaa new-model
+        aaa authentication dot1x default group radius
+        !
+        radius server PORTNOX
+         address ipv4 172.20.20.10 auth-port 1812 acct-port 1813
+         key testing123
+        !
+        dot1x system-auth-control
+        !
+        interface Ethernet2
+         switchport mode access
+         authentication port-control auto
+         dot1x pae authenticator
+         no shutdown
+        !
+        ! Mirror traffic to IDS
+        monitor session 1 source interface Ethernet2
+        monitor session 1 destination interface Ethernet3
+        !
+    
+    # Test Client
+    test-client:
+      kind: linux
+      image: wbitt/network-multitool:latest
+      mgmt-ipv4: 172.20.20.70
+      exec:
+        - apt-get update && apt-get install -y wpasupplicant
+
+  links:
+    # Portnox connections
+    - endpoints: ["portnox-radius:eth1", "test-switch:eth1"]
+    - endpoints: ["portnox-siem:eth1", "wazuh-manager:eth1"]
+    
+    # Security monitoring connections
+    - endpoints: ["test-switch:eth2", "test-client:eth1"]
+    - endpoints: ["test-switch:eth3", "snort-ids:eth1"]
+    - endpoints: ["test-switch:eth4", "suricata-ids:eth1"]
+    
+    # SIEM connections
+    - endpoints: ["wazuh-manager:eth2", "wazuh-indexer:eth1"]
+    - endpoints: ["wazuh-indexer:eth2", "wazuh-dashboard:eth1"]

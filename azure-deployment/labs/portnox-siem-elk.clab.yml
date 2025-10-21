@@ -1,0 +1,108 @@
+name: portnox-siem-elk
+
+# SIEM Integration Lab: Portnox with ELK Stack
+# Demonstrates log forwarding from Portnox to Elasticsearch, Logstash, Kibana
+# Includes Portnox SIEM Forwarder container
+
+topology:
+  nodes:
+    # Portnox SIEM Forwarder
+    portnox-siem-forwarder:
+      kind: linux
+      image: portnox/portnox-siem-forwarder:latest
+      env:
+        PORTNOX_CLOUD_URL: ${PORTNOX_CLOUD_URL:-https://yourorg.portnox.cloud}
+        PORTNOX_GATEWAY_TOKEN: ${PORTNOX_GATEWAY_TOKEN:-your-siem-gateway-token}
+        PORTNOX_ORG_ID: ${PORTNOX_ORG_ID:-your-org-id}
+        # ELK Configuration
+        SIEM_TYPE: elasticsearch
+        ELASTICSEARCH_URL: http://172.20.20.20:9200
+        ELASTICSEARCH_INDEX: portnox-logs
+        ELASTICSEARCH_USERNAME: ${ES_USERNAME:-elastic}
+        ELASTICSEARCH_PASSWORD: ${ES_PASSWORD:-changeme}
+      mgmt-ipv4: 172.20.20.10
+    
+    # Elasticsearch
+    elasticsearch:
+      kind: linux
+      image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+      env:
+        discovery.type: single-node
+        ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+        xpack.security.enabled: "false"
+      ports:
+        - "9200:9200/tcp"
+        - "9300:9300/tcp"
+      mgmt-ipv4: 172.20.20.20
+    
+    # Logstash
+    logstash:
+      kind: linux
+      image: docker.elastic.co/logstash/logstash:8.11.0
+      env:
+        LS_JAVA_OPTS: "-Xms256m -Xmx256m"
+      ports:
+        - "5044:5044/tcp"  # Beats input
+        - "9600:9600/tcp"  # Logstash API
+      mgmt-ipv4: 172.20.20.21
+      binds:
+        - /data/configs/logstash:/usr/share/logstash/pipeline:ro
+    
+    # Kibana
+    kibana:
+      kind: linux
+      image: docker.elastic.co/kibana/kibana:8.11.0
+      env:
+        ELASTICSEARCH_HOSTS: http://172.20.20.20:9200
+      ports:
+        - "5601:5601/tcp"
+      mgmt-ipv4: 172.20.20.22
+    
+    # Portnox RADIUS Server (generating logs)
+    portnox-radius:
+      kind: linux
+      image: portnox/portnox-radius:latest
+      env:
+        PORTNOX_CLOUD_URL: ${PORTNOX_CLOUD_URL:-https://yourorg.portnox.cloud}
+        PORTNOX_GATEWAY_TOKEN: ${PORTNOX_GATEWAY_TOKEN:-your-gateway-token}
+        RADIUS_SECRET: testing123
+        # Forward logs to SIEM Forwarder
+        SYSLOG_SERVER: 172.20.20.10
+        SYSLOG_PORT: 514
+      ports:
+        - "1812:1812/udp"
+        - "1813:1813/udp"
+      mgmt-ipv4: 172.20.20.30
+    
+    # Test Switch (generating authentication events)
+    test-switch:
+      kind: ceos
+      image: ceos:latest
+      mgmt-ipv4: 172.20.20.40
+      startup-config: |
+        hostname test-sw1
+        !
+        aaa new-model
+        aaa authentication dot1x default group radius
+        !
+        radius server PORTNOX
+         address ipv4 172.20.20.30 auth-port 1812 acct-port 1813
+         key testing123
+        !
+        dot1x system-auth-control
+        !
+    
+    # Test Client (generating authentication attempts)
+    test-client:
+      kind: linux
+      image: wbitt/network-multitool:latest
+      mgmt-ipv4: 172.20.20.50
+      exec:
+        - apt-get update && apt-get install -y wpasupplicant
+
+  links:
+    - endpoints: ["portnox-siem-forwarder:eth1", "elasticsearch:eth1"]
+    - endpoints: ["portnox-siem-forwarder:eth2", "logstash:eth1"]
+    - endpoints: ["elasticsearch:eth2", "kibana:eth1"]
+    - endpoints: ["portnox-radius:eth1", "test-switch:eth1"]
+    - endpoints: ["test-switch:eth2", "test-client:eth1"]

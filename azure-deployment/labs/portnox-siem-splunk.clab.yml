@@ -1,0 +1,116 @@
+name: portnox-siem-splunk
+
+# SIEM Integration Lab: Portnox with Splunk
+# Demonstrates log forwarding from Portnox to Splunk Enterprise
+# Includes Portnox SIEM Forwarder container with Splunk HEC integration
+
+topology:
+  nodes:
+    # Portnox SIEM Forwarder (Splunk)
+    portnox-siem-forwarder:
+      kind: linux
+      image: portnox/portnox-siem-forwarder:latest
+      env:
+        PORTNOX_CLOUD_URL: ${PORTNOX_CLOUD_URL:-https://yourorg.portnox.cloud}
+        PORTNOX_GATEWAY_TOKEN: ${PORTNOX_GATEWAY_TOKEN:-your-siem-gateway-token}
+        PORTNOX_ORG_ID: ${PORTNOX_ORG_ID:-your-org-id}
+        # Splunk Configuration
+        SIEM_TYPE: splunk
+        SPLUNK_HEC_URL: https://172.20.20.20:8088
+        SPLUNK_HEC_TOKEN: ${SPLUNK_HEC_TOKEN:-your-hec-token}
+        SPLUNK_INDEX: portnox
+        SPLUNK_SOURCETYPE: portnox:json
+        SPLUNK_VERIFY_SSL: "false"
+      mgmt-ipv4: 172.20.20.10
+    
+    # Splunk Enterprise
+    splunk:
+      kind: linux
+      image: splunk/splunk:latest
+      env:
+        SPLUNK_START_ARGS: --accept-license
+        SPLUNK_PASSWORD: ${SPLUNK_PASSWORD:-changeme123}
+        SPLUNK_HEC_TOKEN: ${SPLUNK_HEC_TOKEN:-your-hec-token}
+      ports:
+        - "8000:8000/tcp"  # Splunk Web
+        - "8088:8088/tcp"  # HEC
+        - "9997:9997/tcp"  # Splunk Forwarder
+      mgmt-ipv4: 172.20.20.20
+    
+    # Portnox RADIUS Server (generating logs)
+    portnox-radius:
+      kind: linux
+      image: portnox/portnox-radius:latest
+      env:
+        PORTNOX_CLOUD_URL: ${PORTNOX_CLOUD_URL:-https://yourorg.portnox.cloud}
+        PORTNOX_GATEWAY_TOKEN: ${PORTNOX_GATEWAY_TOKEN:-your-gateway-token}
+        RADIUS_SECRET: testing123
+        # Forward logs to SIEM Forwarder
+        SYSLOG_SERVER: 172.20.20.10
+        SYSLOG_PORT: 514
+      ports:
+        - "1812:1812/udp"
+        - "1813:1813/udp"
+      mgmt-ipv4: 172.20.20.30
+    
+    # Portnox TACACS+ Server (generating logs)
+    portnox-tacacs:
+      kind: linux
+      image: portnox/portnox-tacacs:latest
+      env:
+        PORTNOX_CLOUD_URL: ${PORTNOX_CLOUD_URL:-https://yourorg.portnox.cloud}
+        PORTNOX_GATEWAY_TOKEN: ${PORTNOX_GATEWAY_TOKEN:-your-tacacs-gateway-token}
+        TACACS_SECRET: testing123
+        # Forward logs to SIEM Forwarder
+        SYSLOG_SERVER: 172.20.20.10
+        SYSLOG_PORT: 514
+      ports:
+        - "49:49/tcp"
+      mgmt-ipv4: 172.20.20.31
+    
+    # Portnox ZTNA Gateway (generating logs)
+    portnox-ztna:
+      kind: linux
+      image: portnox/portnox-ztna-gateway:latest
+      env:
+        PORTNOX_CLOUD_URL: ${PORTNOX_CLOUD_URL:-https://yourorg.portnox.cloud}
+        PORTNOX_GATEWAY_TOKEN: ${PORTNOX_GATEWAY_TOKEN:-your-ztna-gateway-token}
+        # Forward logs to SIEM Forwarder
+        SYSLOG_SERVER: 172.20.20.10
+        SYSLOG_PORT: 514
+      ports:
+        - "443:443/tcp"
+      mgmt-ipv4: 172.20.20.32
+    
+    # Test Network Device
+    test-device:
+      kind: ceos
+      image: ceos:latest
+      mgmt-ipv4: 172.20.20.40
+      startup-config: |
+        hostname test-device
+        !
+        aaa new-model
+        aaa authentication login default group tacacs+ local
+        aaa authentication dot1x default group radius
+        !
+        tacacs server PORTNOX
+         address ipv4 172.20.20.31
+         key testing123
+        !
+        radius server PORTNOX
+         address ipv4 172.20.20.30 auth-port 1812 acct-port 1813
+         key testing123
+        !
+    
+    # Test Client
+    test-client:
+      kind: linux
+      image: wbitt/network-multitool:latest
+      mgmt-ipv4: 172.20.20.50
+
+  links:
+    - endpoints: ["portnox-siem-forwarder:eth1", "splunk:eth1"]
+    - endpoints: ["portnox-radius:eth1", "test-device:eth1"]
+    - endpoints: ["portnox-tacacs:eth1", "test-device:eth2"]
+    - endpoints: ["test-device:eth3", "test-client:eth1"]
