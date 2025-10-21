@@ -6,7 +6,7 @@ topology:
     fortigate-fw-1:
       kind: fortinet_fortigate
       image: vrnetlab/vr-fortios:latest
-      mgmt-ipv4: 172.20.20.50
+      mgmt-ipv4-address: 172.20.20.50/24
       cpu: 2
       memory: 4GB
       startup-config: |
@@ -114,7 +114,7 @@ topology:
     internal-router:
       kind: linux
       image: frrouting/frr:latest
-      mgmt-ipv4: 172.20.20.51
+      mgmt-ipv4-address: 172.20.20.51/24
       exec:
         - ip addr add 10.4.1.2/24 dev eth1
         - ip route add default via 10.4.1.1
@@ -124,7 +124,7 @@ topology:
     external-router:
       kind: linux
       image: frrouting/frr:latest
-      mgmt-ipv4: 172.20.20.52
+      mgmt-ipv4-address: 172.20.20.52/24
       exec:
         - ip addr add 10.4.2.2/24 dev eth1
         - ip link set eth1 up
@@ -133,7 +133,7 @@ topology:
     dmz-server:
       kind: linux
       image: nginx:alpine
-      mgmt-ipv4: 172.20.20.53
+      mgmt-ipv4-address: 172.20.20.53/24
       exec:
         - ip addr add 10.4.3.2/24 dev eth1
         - ip route add default via 10.4.3.1
@@ -143,7 +143,7 @@ topology:
     radius-server:
       kind: linux
       image: portnox/portnox-radius:latest
-      mgmt-ipv4: 172.20.20.101
+      mgmt-ipv4-address: 172.20.20.101/24
       ports:
         - 1812:1812/udp
         - 1813:1813/udp
@@ -152,7 +152,7 @@ topology:
     tacacs-server:
       kind: linux
       image: portnox/portnox-tacacs:latest
-      mgmt-ipv4: 172.20.20.100
+      mgmt-ipv4-address: 172.20.20.100/24
       ports:
         - 49:49/tcp
     
@@ -160,7 +160,7 @@ topology:
     internal-client:
       kind: linux
       image: nicolaka/netshoot:latest
-      mgmt-ipv4: 172.20.20.206
+      mgmt-ipv4-address: 172.20.20.206/24
       exec:
         - ip addr add 10.4.1.10/24 dev eth1
         - ip route add default via 10.4.1.1
@@ -169,7 +169,7 @@ topology:
     vpn-client:
       kind: linux
       image: ubuntu:22.04
-      mgmt-ipv4: 172.20.20.207
+      mgmt-ipv4-address: 172.20.20.207/24
       exec:
         - apt-get update && apt-get install -y openfortivpn
   

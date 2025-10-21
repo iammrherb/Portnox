@@ -9,7 +9,7 @@ topology:
     vmx-core-1:
       kind: juniper_vmx
       image: vrnetlab/vr-vmx:latest
-      mgmt-ipv4: 172.20.20.30
+      mgmt-ipv4-address: 172.20.20.30/24
       cpu: 2
       memory: 4GB
       startup-config: |
@@ -74,7 +74,7 @@ topology:
     vmx-edge-1:
       kind: juniper_vmx
       image: vrnetlab/vr-vmx:latest
-      mgmt-ipv4: 172.20.20.31
+      mgmt-ipv4-address: 172.20.20.31/24
       cpu: 2
       memory: 4GB
       startup-config: |
@@ -135,7 +135,7 @@ topology:
     vqfx-access-1:
       kind: juniper_vqfx
       image: vrnetlab/vr-vqfx:latest
-      mgmt-ipv4: 172.20.20.32
+      mgmt-ipv4-address: 172.20.20.32/24
       cpu: 2
       memory: 4GB
       startup-config: |
@@ -225,7 +225,7 @@ topology:
     radius-server:
       kind: linux
       image: portnox/portnox-radius:latest
-      mgmt-ipv4: 172.20.20.101
+      mgmt-ipv4-address: 172.20.20.101/24
       ports:
         - 1812:1812/udp
         - 1813:1813/udp
@@ -234,7 +234,7 @@ topology:
     tacacs-server:
       kind: linux
       image: portnox/portnox-tacacs:latest
-      mgmt-ipv4: 172.20.20.100
+      mgmt-ipv4-address: 172.20.20.100/24
       ports:
         - 49:49/tcp
     
@@ -242,7 +242,7 @@ topology:
     test-client:
       kind: linux
       image: nicolaka/netshoot:latest
-      mgmt-ipv4: 172.20.20.203
+      mgmt-ipv4-address: 172.20.20.203/24
   
   links:
     - endpoints: ["vmx-core-1:eth1", "vmx-edge-1:eth1"]

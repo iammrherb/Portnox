@@ -22,7 +22,7 @@ topology:
       ports:
         - "443:443/tcp"
         - "8443:8443/tcp"
-      mgmt-ipv4: 172.20.20.10
+      mgmt-ipv4-address: 172.20.20.10/24
     
     # Azure AD Simulator (Keycloak configured as Azure AD)
     idp-azure-ad:
@@ -35,7 +35,7 @@ topology:
         KC_HTTP_PORT: 8080
       ports:
         - "8081:8080/tcp"
-      mgmt-ipv4: 172.20.20.20
+      mgmt-ipv4-address: 172.20.20.20/24
       exec:
         - /opt/keycloak/bin/kc.sh start-dev
     
@@ -50,7 +50,7 @@ topology:
         KC_HTTP_PORT: 8080
       ports:
         - "8082:8080/tcp"
-      mgmt-ipv4: 172.20.20.21
+      mgmt-ipv4-address: 172.20.20.21/24
       exec:
         - /opt/keycloak/bin/kc.sh start-dev
     
@@ -65,7 +65,7 @@ topology:
         KC_HTTP_PORT: 8080
       ports:
         - "8083:8080/tcp"
-      mgmt-ipv4: 172.20.20.22
+      mgmt-ipv4-address: 172.20.20.22/24
       exec:
         - /opt/keycloak/bin/kc.sh start-dev
     
@@ -80,7 +80,7 @@ topology:
         KC_HTTP_PORT: 8080
       ports:
         - "8084:8080/tcp"
-      mgmt-ipv4: 172.20.20.23
+      mgmt-ipv4-address: 172.20.20.23/24
       exec:
         - /opt/keycloak/bin/kc.sh start-dev
     
@@ -88,7 +88,7 @@ topology:
     app-corporate:
       kind: linux
       image: nginx:latest
-      mgmt-ipv4: 172.20.20.30
+      mgmt-ipv4-address: 172.20.20.30/24
       ports:
         - "8090:80/tcp"
     
@@ -96,7 +96,7 @@ topology:
     app-saas:
       kind: linux
       image: nginx:latest
-      mgmt-ipv4: 172.20.20.31
+      mgmt-ipv4-address: 172.20.20.31/24
       ports:
         - "8091:80/tcp"
     
@@ -104,7 +104,7 @@ topology:
     app-storage:
       kind: linux
       image: nginx:latest
-      mgmt-ipv4: 172.20.20.32
+      mgmt-ipv4-address: 172.20.20.32/24
       ports:
         - "8092:80/tcp"
     
@@ -112,7 +112,7 @@ topology:
     app-hr:
       kind: linux
       image: nginx:latest
-      mgmt-ipv4: 172.20.20.33
+      mgmt-ipv4-address: 172.20.20.33/24
       ports:
         - "8093:80/tcp"
     
@@ -120,22 +120,22 @@ topology:
     client-azure:
       kind: linux
       image: wbitt/network-multitool:latest
-      mgmt-ipv4: 172.20.20.40
+      mgmt-ipv4-address: 172.20.20.40/24
     
     client-okta:
       kind: linux
       image: wbitt/network-multitool:latest
-      mgmt-ipv4: 172.20.20.41
+      mgmt-ipv4-address: 172.20.20.41/24
     
     client-google:
       kind: linux
       image: wbitt/network-multitool:latest
-      mgmt-ipv4: 172.20.20.42
+      mgmt-ipv4-address: 172.20.20.42/24
     
     client-onelogin:
       kind: linux
       image: wbitt/network-multitool:latest
-      mgmt-ipv4: 172.20.20.43
+      mgmt-ipv4-address: 172.20.20.43/24
 
   links:
     # ZTNA Gateway to IDPs

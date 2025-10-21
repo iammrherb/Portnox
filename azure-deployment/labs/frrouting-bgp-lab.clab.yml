@@ -6,7 +6,7 @@ topology:
     frr-router-1:
       kind: linux
       image: frrouting/frr:latest
-      mgmt-ipv4: 172.20.20.70
+      mgmt-ipv4-address: 172.20.20.70/24
       binds:
         - frr-router-1-config:/etc/frr
       exec:
@@ -56,7 +56,7 @@ topology:
     frr-router-2:
       kind: linux
       image: frrouting/frr:latest
-      mgmt-ipv4: 172.20.20.71
+      mgmt-ipv4-address: 172.20.20.71/24
       binds:
         - frr-router-2-config:/etc/frr
       exec:
@@ -106,7 +106,7 @@ topology:
     frr-router-3:
       kind: linux
       image: frrouting/frr:latest
-      mgmt-ipv4: 172.20.20.72
+      mgmt-ipv4-address: 172.20.20.72/24
       binds:
         - frr-router-3-config:/etc/frr
       exec:
@@ -157,7 +157,7 @@ topology:
     frr-rr-1:
       kind: linux
       image: frrouting/frr:latest
-      mgmt-ipv4: 172.20.20.73
+      mgmt-ipv4-address: 172.20.20.73/24
       binds:
         - frr-rr-1-config:/etc/frr
       exec:
@@ -204,7 +204,7 @@ topology:
     client-net-1:
       kind: linux
       image: nicolaka/netshoot:latest
-      mgmt-ipv4: 172.20.20.211
+      mgmt-ipv4-address: 172.20.20.211/24
       exec:
         - ip addr add 10.6.0.10/24 dev eth1
         - ip route add default via 10.6.0.1
@@ -213,7 +213,7 @@ topology:
     client-net-2:
       kind: linux
       image: nicolaka/netshoot:latest
-      mgmt-ipv4: 172.20.20.212
+      mgmt-ipv4-address: 172.20.20.212/24
       exec:
         - ip addr add 10.6.10.10/24 dev eth1
         - ip route add default via 10.6.10.1
@@ -222,7 +222,7 @@ topology:
     client-net-3:
       kind: linux
       image: nicolaka/netshoot:latest
-      mgmt-ipv4: 172.20.20.213
+      mgmt-ipv4-address: 172.20.20.213/24
       exec:
         - ip addr add 10.6.20.10/24 dev eth1
         - ip route add default via 10.6.20.1
@@ -232,7 +232,7 @@ topology:
     prometheus:
       kind: linux
       image: prom/prometheus:latest
-      mgmt-ipv4: 172.20.20.90
+      mgmt-ipv4-address: 172.20.20.90/24
       ports:
         - 9090:9090/tcp
       binds:
@@ -252,7 +252,7 @@ topology:
     grafana:
       kind: linux
       image: grafana/grafana:latest
-      mgmt-ipv4: 172.20.20.91
+      mgmt-ipv4-address: 172.20.20.91/24
       ports:
         - 3000:3000/tcp
       env:

@@ -9,9 +9,7 @@ topology:
   kinds:
     srl:
       image: ghcr.io/nokia/srlinux:22.11.2
-      type: ixrd3
-      wait-for:
-        - splunk
+      type: ixr-d3
     linux:
       image: ghcr.io/hellt/network-multitool
 
