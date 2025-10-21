@@ -131,8 +131,8 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y -o Dpkg::Options::="--force-co
     log_warning "Docker installation reported errors, but packages may be installed"
 }
 
-usermod -aG docker azureuser
-if [ -n "$SUDO_USER" ] && [ "$SUDO_USER" != "azureuser" ]; then
+usermod -aG docker labnox
+if [ -n "$SUDO_USER" ] && [ "$SUDO_USER" != "labnox" ]; then
     usermod -aG docker $SUDO_USER
     log_info "Added $SUDO_USER to docker group"
 fi
@@ -597,7 +597,7 @@ echo "╚═══════════════════════�
 echo ""
 echo "Access your lab environment:"
 echo "  • Antimony GUI: http://$(hostname -I | awk '{print $1}'):8080"
-echo "  • SSH: ssh azureuser@$(hostname -I | awk '{print $1}')"
+echo "  • SSH: ssh labnox@$(hostname -I | awk '{print $1}')"
 echo "  • Labs directory: /data/labs"
 echo ""
 echo "Quick start commands:"

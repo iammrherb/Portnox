@@ -249,7 +249,7 @@ EOF
 log_success "SR Linux startup configurations created"
 
 # Set proper permissions
-chown -R azureuser:azureuser /data/configs /data/labs
+chown -R labnox:labnox /data/configs /data/labs
 chmod -R 755 /data/configs /data/labs
 
 echo ""
